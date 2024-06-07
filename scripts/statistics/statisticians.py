@@ -1,47 +1,23 @@
 import numpy as np
 from .microstate_stat_helper import *
+from sequence_analysis.sequence_statisticians import \
+    calculate_entropy, calculate_max_entropy, calculate_transition_matrix, calculate_empirical_symbol_distribution,\
+        calculate_empirical_entropy
 
 class SegmentationStatisticians(object):
     
     def __init__(self, language_configuration):
         self.language_configuration = language_configuration
     
-    def calculate_entropy(self, word_sequence):
-        word_counting_record = {}
-        for word in word_sequence:
-            if word not in word_counting_record:
-                word_counting_record[word] = 0
-            word_counting_record[word] += 1
-        counts = list(word_counting_record.values())
-        freqs = counts / np.sum(counts)
-        del counts
-        entropy = [freq * np.log(freq) for freq in freqs]
-
     def calculate_transition_matrix(self, solution):
         word_count_in_language_configuration = self.language_configuration.configuration_word_count()
         print("There are %d words in the word list of the language configuration." % word_count_in_language_configuration)
-        mat = np.zeros((word_count_in_language_configuration, word_count_in_language_configuration))
-        pos = 1
-        word_sequence = solution.get_word_sequence()
-        while pos < len(word_sequence):
-            previous_word_id = word_sequence[pos - 1]
-            current_word_id = word_sequence[pos]
-            mat[previous_word_id, current_word_id] += 1
-            pos += 1
-        mat /= np.sum(mat, axis = 1)[:, np.newaxis]
-        return mat
+        return calculate_transition_matrix(solution.get_word_sequence(), word_count_in_language_configuration)
 
     def calculate_empirical_symbol_distribution(self, solution):
         word_count_in_language_configuration = self.language_configuration.configuration_word_count()
-        mat = np.zeros((word_count_in_language_configuration))
-        pos = 0
-        word_sequence = solution.get_word_sequence()
-        while pos < len(word_sequence):
-            current_word_id = word_sequence[pos]
-            mat[current_word_id] += 1
-            pos += 1
-        return (mat / np.sum(mat)).reshape((word_count_in_language_configuration, 1))
-
+        return calculate_empirical_symbol_distribution(solution.get_word_sequence(), word_count_in_language_configuration)
+    
     def calculate_global_explained_variance(self):
         raise NotImplementedError
 
@@ -49,15 +25,10 @@ class SegmentationStatisticians(object):
         raise NotImplementedError
 
     def calculate_empirical_entropy(self, solution):
-        empirical_symbol_distribution = self.calculate_empirical_symbol_distribution(solution)
-        entropy = 0
-        for i in range(len(empirical_symbol_distribution)):
-            entropy += empirical_symbol_distribution[i] * np.log2(empirical_symbol_distribution[i])
-        return -entropy
+        return calculate_empirical_entropy(solution.get_word_sequence())
 
     def calculate_max_entropy(self):
-        word_count_in_language_configuration = self.language_configuration.configuration_word_count()
-        return -word_count_in_language_configuration * ((1.0 / word_count_in_language_configuration) * (np.log2(1.0 / word_count_in_language_configuration)))
+        return calculate_max_entropy(self.language_configuration.configuration_word_count())
 
     def calculate_excess_entropy_rate(self):
         raise NotImplementedError
@@ -96,6 +67,7 @@ class SegmentationStatisticians(object):
         p_surr = p_empirical(x_mc, word_count_in_language_configuration)
         T_surr = T_empirical(x_mc, word_count_in_language_configuration)
         return T_surr
+    
     def time_lagged_mutual_information(self, solution, plot=True, n_mc = 10, lag_max = 100, alpha=0.01):
         word_id_sequence = solution.get_word_sequence()
         word_count_in_language_configuration = self.language_configuration.configuration_word_count()
