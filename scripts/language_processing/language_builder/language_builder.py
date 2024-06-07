@@ -1,0 +1,126 @@
+import sys
+import scipy.signal
+sys.path.append("..")
+
+from entities.wordlist import *
+import numpy as np
+from scipy import signal
+
+class AbstractWordListBuilder(object):
+    def build_word_list(self, eeg_matrix, eeg_info, electrode_locations):
+        raise NotImplementedError
+    def deserialize_from_file(self, file_path):
+        raise NotImplementedError
+           
+class AbstracrGrammarExtractor(object):
+    def extract_grammar(self, eeg_matrix, eeg_info, word_list):
+        raise NotImplementedError
+    
+from utils.microstates_algorithms import locmax
+class GFPKmeansWordListBuilder(AbstractWordListBuilder):
+    def __init__(self, eletrode_location_map):
+        super().__init__()
+        self.eletrode_location_map = eletrode_location_map
+        
+    def _calculate_gfp(self, eeg_matrx):
+        cnt_channels = eeg_matrx.shape[0]
+        print("channels = %d" % cnt_channels)
+        electrode_averages = np.average(eeg_matrx, axis=0)
+        gfps = np.sqrt(np.sum((eeg_matrx - electrode_averages) ** 2 / cnt_channels, axis=0))
+        return gfps        
+    
+    def deserialize_from_file(self, file_path):
+        return ElectrodeValueRepresentationEEGWordList(word_list=None).deserialize_from(file_path)
+       
+    def build_word_list(self, eeg_matrix, eeg_info, electrode_locations, n_clusters=10, n_runs=5, doplot=True) -> AbstractEEGWordList:
+        from utils.microstates_algorithms import kmeans
+        
+         # --- normalized data ---
+        data_norm = eeg_matrix - eeg_matrix.mean(axis=0, keepdims=True)
+        data_norm /= data_norm.std(axis=0, keepdims=True)
+
+        # calculate GFP
+        gfps = self._calculate_gfp(eeg_matrix)
+
+        gfp_peaks = locmax(gfps)
+        data_cluster = eeg_matrix[:, gfp_peaks]
+        data_cluster_norm = data_cluster - data_cluster.mean(axis=0, keepdims=True)
+        data_cluster_norm /= data_cluster_norm.std(axis=0, keepdims=True)
+        print("\t[+] Data format for clustering [channels, GFP Peeks]: {:d} x {:d}"\
+            .format(data_cluster.shape[0], data_cluster.shape[1]))
+        
+        print("\n\t[+] Clustering algorithm: mod. K-MEANS.")
+        maps = kmeans(eeg_matrix, n_maps=n_clusters, n_runs=5, doplot=False)
+        
+        # --- microstate sequence ---
+        C = np.dot(data_norm.T, maps) / eeg_matrix.shape[1]
+        L = np.argmax(C ** 2, axis = 1)
+        del C
+
+        # --- GEV ---
+        maps_norm = maps - maps.mean(axis=0, keepdims=True)
+        maps_norm /= maps_norm.std(axis=0, keepdims=True)
+
+        # --- correlation data, maps ---
+        cnt_channels = eeg_matrix.shape[0]
+        C = np.dot(data_norm.T, maps_norm) / cnt_channels
+        
+        normal_gfp_2 = np.sum(gfps ** 2)
+        # --- GEV_k & GEV ---
+        gev = np.zeros(n_clusters)
+        for k in range(n_clusters):
+            r = L == k
+            gev[k] = np.sum(gfps[r] ** 2 * C[r, k] ** 2) / normal_gfp_2
+        
+        print("\n\t[+] Global explained variance GEV = {:.3f}".format(gev.sum()))
+        for k in range(n_clusters): print("\t\tGEV_{:d}: {:.3f}".format(k, gev[k]))
+
+        if doplot:
+            import matplotlib.pyplot as plt
+            from utils.topological_graph import eeg2map
+            plt.ion()
+            # matplotlib's perceptually uniform sequential colormaps:
+            # magma, inferno, plasma, viridis
+            cm = plt.cm.magma
+            fig, axarr = plt.subplots(1, n_clusters, figsize=(20,5))
+            fig.patch.set_facecolor('white')
+            for imap in range(n_clusters):
+                axarr[imap].imshow(eeg2map(maps[:, imap], self.eletrode_location_map), cmap=cm, origin='lower')
+                axarr[imap].set_xticks([])
+                axarr[imap].set_xticklabels([])
+                axarr[imap].set_yticks([])
+                axarr[imap].set_yticklabels([])
+            title = "Microstate maps ({:s})".format("GFP-Kmeans")
+            axarr[0].set_title(title, fontsize=16, fontweight="bold")
+            plt.show()
+
+            # --- assign map labels manually ---
+            
+            order_str = ['w_' + str(map_id) for map_id in np.arange(0, n_clusters)]
+            order = np.zeros(n_clusters, dtype=int)
+            for i, s in enumerate(order_str):
+                order[i] = int(i)
+            
+            print("\t\tRe-ordered labels: {:s}".format(", ".join(order_str)))
+            # re-order return variables
+            maps = maps[:,order]
+            for i in range(len(L)):
+                L[i] = order[L[i]]
+            gev = gev[order]
+            # Figure
+            fig, axarr = plt.subplots(1, n_clusters, figsize=(20,5))
+            fig.patch.set_facecolor('white')
+
+            for imap in range(n_clusters):
+                axarr[imap].imshow(eeg2map(maps[:, imap], self.eletrode_location_map), cmap=cm, origin='lower')
+                axarr[imap].set_xticks([])
+                axarr[imap].set_xticklabels([])
+                axarr[imap].set_yticks([])
+                axarr[imap].set_yticklabels([])
+            title = "re-ordered microstate maps"
+            axarr[0].set_title(title, fontsize=16, fontweight="bold")
+            plt.show()
+            plt.ioff()
+        word_list = maps.T
+        print("Build Word List Finished, in eletrode value representaion. Shape = %s" % str(word_list.shape))
+        return ElectrodeValueRepresentationEEGWordList(word_list)

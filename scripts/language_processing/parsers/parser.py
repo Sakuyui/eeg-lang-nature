@@ -1,0 +1,2 @@
+class AbstractEEGParser(object):
+    pass
