@@ -1,0 +1,2 @@
+class AbstractGASolution(object):
+    pass

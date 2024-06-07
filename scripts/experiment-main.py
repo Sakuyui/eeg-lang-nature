@@ -4,9 +4,9 @@ from typing import Dict
 from entities.grammar import *
 from entities.wordlist import *
 from evaluators.abstract_evaluator import *
-from models.abstract_prediction_model import *
-from models.abstract_segment_preprocessing_model import *
-from models.model_builder import *
+from applications.prediction_models.abstract_prediction_model import *
+from applications.prediction_models.abstract_segment_preprocessing_model import *
+from applications.prediction_models.model_builder import *
 from language_processing.parsers.parser import *
 from language_processing.language_builder.language_builder import *
 from language_processing.language_builder.configuration import *
