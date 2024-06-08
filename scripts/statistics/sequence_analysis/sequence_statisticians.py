@@ -2,7 +2,8 @@ import numpy as np
 import sys
 sys.path.append("..")
 from microstate_stat_helper import testMarkov0, testMarkov1, testMarkov2
-
+    
+    
 def calculate_entropy(sequence):
     element_counting_record = {}
     for element in sequence:
@@ -19,7 +20,6 @@ def calculate_max_entropy(element_count: int, base = 2):
     p = 1.0 / element_count # entropy reach maximum when the distribution of element obey uniform distribution
     return -element_count * (np.log(element_count) / np.log(base))
 
-        
 def calculate_empirical_entropy(sequence, base = 2):
     empirical_symbol_distribution = calculate_empirical_symbol_distribution(sequence, base)
     entropy = 0
@@ -56,3 +56,4 @@ def markov_tests(sequence, cnt_element_categories, order=0, alpha=0.01):
             testMarkov2(sequence, cnt_element_categories, alpha)
         else:
             raise NotImplementedError
+
