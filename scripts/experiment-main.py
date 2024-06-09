@@ -16,7 +16,6 @@ class Experiment(object):
     def __init__(self, configuration: Dict):
         self.configuration = configuration
     
-    
     def is_configuration_exist(self, configure_name, recursively = False) -> bool:
         def recursively_check(dictionary):
             if dictionary == None or not isinstance(dictionary, dict):
