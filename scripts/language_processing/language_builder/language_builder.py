@@ -3,8 +3,11 @@ import scipy.signal
 sys.path.append("..")
 
 from entities.word import *
+from entities.eeg_state import EletrodeValuesEEGState
 import numpy as np
 from scipy import signal
+from utils.microstates_algorithms import locmax
+
 
 class AbstractWordListBuilder(object):
     def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations) -> AbstractEEGLanguageDictionary:
@@ -16,14 +19,30 @@ class AbstracrGrammarExtractor(object):
     def extract_grammar(self, eeg_matrix, eeg_info, dictionary):
         raise NotImplementedError
     
-from utils.microstates_algorithms import locmax
 class DummyEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         super().__init__()
     def deserialize_from_file(self, file_path):
         return DictionaryImplementedEEGLanguageDictionary(word_list=None).deserialize_from(file_path)
-    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations):
-        return super().build_dictionary(eeg_matrix, eeg_info, electrode_locations)   
+    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations, dictionary_building_config):
+        cnt_words = dictionary_building_config['cnt_words']
+        cnt_channels = eeg_matrix.shape[0]
+        if cnt_channels > cnt_words:
+            raise ValueError
+        return DictionaryImplementedEEGLanguageDictionary([EletrodeValuesEEGState(np.array([[0]] * cnt_channels)) for i in range(0, cnt_words)])
+    
+class RandomEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
+    def __init__(self):
+        super().__init__()
+    def deserialize_from_file(self, file_path):
+        return DictionaryImplementedEEGLanguageDictionary(word_list=None).deserialize_from(file_path)
+    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations, dictionary_building_config):
+        cnt_words = dictionary_building_config['cnt_words']
+        cnt_channels = eeg_matrix.shape[0]
+        cnt_samples = eeg_matrix.shape[1]
+        if cnt_channels > cnt_words:
+            raise ValueError
+        return DictionaryImplementedEEGLanguageDictionary([EletrodeValuesEEGState(eeg_matrix[np.random.randint(0, cnt_samples)]) for _ in range(0, cnt_words)])
     
 class GFPKmeansEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def __init__(self, eletrode_location_map):
@@ -40,8 +59,11 @@ class GFPKmeansEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def deserialize_from_file(self, file_path):
         return DictionaryImplementedEEGLanguageDictionary(word_list=None).deserialize_from(file_path)
        
-    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations, n_clusters=10, n_runs=5, doplot=True) -> AbstractEEGLanguageDictionary:
+    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations, dictionary_building_config) -> AbstractEEGLanguageDictionary:
         from utils.microstates_algorithms import kmeans
+        n_clusters = dictionary_building_config['cnt_words']
+        n_runs = dictionary_building_config['cnt_runs']
+        doplot = dictionary_building_config['doplot'] if 'doplot' in dictionary_building_config else False
         
          # --- normalized data ---
         data_norm = eeg_matrix - eeg_matrix.mean(axis=0, keepdims=True)
