@@ -29,7 +29,7 @@ class DummyEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
         cnt_channels = eeg_matrix.shape[0]
         if cnt_channels > cnt_words:
             raise ValueError
-        return DictionaryImplementedEEGLanguageDictionary([EletrodeValuesEEGState(np.array([[0]] * cnt_channels)) for i in range(0, cnt_words)])
+        return DictionaryImplementedEEGLanguageDictionary([StateRepresentedEEGWord(state, word_id) for word_id, state in enumerate([EletrodeValuesEEGState(np.array([[0]] * cnt_channels)) for i in range(0, cnt_words)])])
     
 class RandomEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def __init__(self):
@@ -40,9 +40,9 @@ class RandomEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
         cnt_words = dictionary_building_config['cnt_words']
         cnt_channels = eeg_matrix.shape[0]
         cnt_samples = eeg_matrix.shape[1]
-        if cnt_channels > cnt_words:
+        if cnt_words > cnt_channels:
             raise ValueError
-        return DictionaryImplementedEEGLanguageDictionary([EletrodeValuesEEGState(eeg_matrix[np.random.randint(0, cnt_samples)]) for _ in range(0, cnt_words)])
+        return DictionaryImplementedEEGLanguageDictionary([StateRepresentedEEGWord(state, word_id) for word_id, state in enumerate([EletrodeValuesEEGState(eeg_matrix[:, np.random.randint(0, cnt_samples)]) for _ in range(0, cnt_words)])])
     
 class GFPKmeansEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def __init__(self, eletrode_location_map):

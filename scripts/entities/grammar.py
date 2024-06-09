@@ -1,4 +1,8 @@
 import numpy as np
+import sys
+sys.path.append("..")
+sys.path.append("../..")
+
 from typing import List, Set
 from scripts.entities.word import *
 from scripts.entities.grammar import *

@@ -1,10 +1,13 @@
 import numpy as np
 from typing import List
 from scripts.entities.eeg_state import *
+from scripts.entities.eeg_state import AbstractEEGState
 class AbstractEEGWord(object):
     def __init__(self):
         pass
     def get_word_id(self):
+        raise NotImplemented
+    def get_eeg_state_representation_of_word(self):
         raise NotImplemented
     
 class StateRepresentedEEGWord(AbstractEEGWord):
@@ -24,7 +27,9 @@ class SegmentRepresentedEEGWord(AbstractEEGWord):
         }
     def get_word_id(self):
         return self.tags['word_id']
-
+    def get_eeg_state_representation_of_word(self):
+        return SegmentEEGState(self.segment)
+    
 class AbstractEEGLanguageDictionary(object):
     def __init__(self):
         pass
@@ -40,6 +45,9 @@ class AbstractEEGLanguageDictionary(object):
     
     def get_word_count(self) -> int:
         raise NotImplementedError
+    
+    def get_eeg_state_representation_of_word(self, word_id) -> AbstractEEGState:
+        raise NotImplementedError
 
 class DictionaryImplementedEEGLanguageDictionary(AbstractEEGLanguageDictionary):
     def __init__(self, word_list: List[AbstractEEGWord]):
@@ -47,11 +55,15 @@ class DictionaryImplementedEEGLanguageDictionary(AbstractEEGLanguageDictionary):
         self.dictionary = {word.get_word_id(): word for word in word_list}
     
     def deserialize_from(self, file_path):
-        self.dictionary = np.load(file_path, allow_pickle=True)
+        from six.moves import cPickle as pickle
+        with open(file_path, 'rb') as f:
+            self.dictionary = pickle.load(f)
         return self
     
     def serialize_to(self, file_path):
-        np.save(file_path, self.dictionary, allow_pickle=True)
+        from six.moves import cPickle as pickle
+        with open(file_path, 'wb') as f:
+            pickle.dump(self.dictionary, f)
     
     def append(self, word: AbstractEEGWord) -> AbstractEEGLanguageDictionary:
         self.dictionary[word.get_word_id()] = word
@@ -59,4 +71,8 @@ class DictionaryImplementedEEGLanguageDictionary(AbstractEEGLanguageDictionary):
         
     def get_word_count(self) -> int:
         return len(self.dictionary)
+    
+    def get_eeg_state_representation_of_word(self, word_id) -> AbstractEEGState:
+        word: AbstractEEGWord = self.dictionary[word_id]
+        return word.get_eeg_state_representation_of_word()
     

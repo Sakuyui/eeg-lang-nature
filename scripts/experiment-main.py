@@ -92,7 +92,6 @@ class Experiment(object):
     def build_dictionary(self, eeg_matrix, eeg_info) -> AbstractEEGLanguageDictionary:
         dictionary_builder: AbstractWordListBuilder = self.select_dictionary_builder()
         dictionary = None
-        
         if self.get_bool_congiguration_item('build_dictionary_from_file'):
             dictionary = dictionary_builder.deserialize_from_file(self.configuration['input_dictionary_file_path'])
             print(" ------ deserialize word list from %s ------" % self.configuration['input_dictionary_file_path'])
@@ -195,17 +194,17 @@ experiment_configuration1 = {
     'raw_file_path': '../data/dataset1/Raw_EDF_Files/p10_Record1.edf',
     'ch_names': ['Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1','O2','F7','F8','T3','T4','T5','T6','Fz','A1','A2'],
     'montage': 'standard_1020',
-    'dictionary_builder': 'dummy',
+    'dictionary_builder': 'random',
     'dictionary_builder_configuration':{
-        'cnt_word': 10  
+        'cnt_words': 10  
     },
     'serialize_dictionary': True,
     'output_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl.npy',
-    'build_dictionary_from_file': True,
+    'build_dictionary_from_file': False,
     'input_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl.npy',
     'lexer': 'gfp-electrode-value-based-lexer',
     'save_word_sequence': True,
-    'load_word_sequence_from_file': True,
+    'load_word_sequence_from_file': False,
     'input_word_sequence_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_sequence.ws.npy',
     'output_word_sequence_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_sequence.ws.npy',
 

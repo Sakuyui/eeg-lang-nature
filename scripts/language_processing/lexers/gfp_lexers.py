@@ -18,7 +18,8 @@ class GFPElectrodeValueBasedLexer(AbstractLexer) :
         
     def segment(self, dictionary: AbstractEEGLanguageDictionary, eeg_data: NDArray, electrode_location_configuration) -> NDArray:
         cnt_channels = eeg_data.shape[0]
-        electrode_averages = np.average(eeg_data, axis=1)
+        print("cnt_channels = %d" % cnt_channels)
+        electrode_averages = np.average(eeg_data, axis=0)
         gfps = np.sqrt(np.sum((eeg_data - electrode_averages) ** 2 / cnt_channels, axis=1))
         gfp_peaks = scipy.signal.find_peaks(gfps)[0]
         

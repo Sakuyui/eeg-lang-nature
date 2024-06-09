@@ -9,7 +9,12 @@ class AbstractEEGState(object):
 class TopologicalMapEEGState(AbstractEEGState):
     def __init__(self, topological_map, eletrode_location_configuration):
         self.topological_map = topological_map
-
+        self.eletrode_location_configuration = eletrode_location_configuration
+        
+class SegmentEEGState(AbstractEEGState):
+    def __init__(self, segment):
+        self.segment = segment
+        
 class EletrodeValuesEEGState(AbstractEEGState):
     def __init__(self, eleteode_values: NDArray):
         self.eleteode_values = eleteode_values
