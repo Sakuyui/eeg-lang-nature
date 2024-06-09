@@ -1,7 +1,5 @@
 import numpy as np
 
-
-
 def locmax(x):
     """Get local maxima of 1D-array
 

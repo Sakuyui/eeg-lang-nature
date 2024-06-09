@@ -1,7 +1,7 @@
 import numpy as np
 from .microstate_stat_helper import *
-from sequence_analysis.sequence_statisticians import \
-    calculate_entropy, calculate_max_entropy, calculate_transition_matrix, calculate_empirical_symbol_distribution,\
+from sequence_analysis.sequence_statisticians import calculate_entropy, calculate_max_entropy,\
+    calculate_transition_matrix, calculate_empirical_symbol_distribution,\
         calculate_empirical_entropy
 
 class SegmentationStatisticians(object):

@@ -2,7 +2,7 @@ import sys
 import scipy.signal
 sys.path.append("..")
 
-from entities.wordlist import *
+from entities.word import *
 import numpy as np
 from scipy import signal
 
@@ -17,7 +17,11 @@ class AbstracrGrammarExtractor(object):
         raise NotImplementedError
     
 from utils.microstates_algorithms import locmax
-class GFPKmeansWordListBuilder(AbstractWordListBuilder):
+class DummyEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+    
+class GFPKmeansEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def __init__(self, eletrode_location_map):
         super().__init__()
         self.eletrode_location_map = eletrode_location_map
@@ -30,9 +34,9 @@ class GFPKmeansWordListBuilder(AbstractWordListBuilder):
         return gfps        
     
     def deserialize_from_file(self, file_path):
-        return ElectrodeValueRepresentationEEGWordList(word_list=None).deserialize_from(file_path)
+        return DictionaryImplementedEEGLanguageDictionary(word_list=None).deserialize_from(file_path)
        
-    def build_word_list(self, eeg_matrix, eeg_info, electrode_locations, n_clusters=10, n_runs=5, doplot=True) -> AbstractEEGWordList:
+    def build_word_list(self, eeg_matrix, eeg_info, electrode_locations, n_clusters=10, n_runs=5, doplot=True) -> AbstractEEGLanguageDictionary:
         from utils.microstates_algorithms import kmeans
         
          # --- normalized data ---
@@ -123,4 +127,4 @@ class GFPKmeansWordListBuilder(AbstractWordListBuilder):
             plt.ioff()
         word_list = maps.T
         print("Build Word List Finished, in eletrode value representaion. Shape = %s" % str(word_list.shape))
-        return ElectrodeValueRepresentationEEGWordList(word_list)
+        return DictionaryImplementedEEGLanguageDictionary([StateRepresentedEEGWord(EletrodeValuesEEGState(word_list[word_id]), word_id) for word_id in range(0, word_list.shape[0])])

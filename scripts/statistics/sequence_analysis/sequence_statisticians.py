@@ -2,8 +2,7 @@ import numpy as np
 import sys
 sys.path.append("..")
 from microstate_stat_helper import testMarkov0, testMarkov1, testMarkov2
-    
-    
+
 def calculate_entropy(sequence):
     element_counting_record = {}
     for element in sequence:
@@ -56,4 +55,3 @@ def markov_tests(sequence, cnt_element_categories, order=0, alpha=0.01):
             testMarkov2(sequence, cnt_element_categories, alpha)
         else:
             raise NotImplementedError
-

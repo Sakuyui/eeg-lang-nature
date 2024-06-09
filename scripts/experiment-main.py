@@ -2,7 +2,7 @@
 # eeg_syntax_tree: AbstractEEGSyntaxTree = parser.parse(eeg_info, eeg_matrix, word_list, grammar)
 from typing import Dict
 from entities.grammar import *
-from entities.wordlist import *
+from entities.word import *
 from evaluators.abstract_evaluator import *
 from applications.prediction_models.abstract_prediction_model import *
 from applications.prediction_models.abstract_segment_preprocessing_model import *
@@ -59,7 +59,7 @@ class Experiment(object):
         return recursively_get(self.configuration)
         
     def load_eeg_data(self):
-        raw_file_path = self.get_configure_item_if_exist('raw_file_path')
+        raw_file_path = self.get_configuration_item_if_exist('raw_file_path')
         print("Load raw file from %s" % raw_file_path)
         raw_data = mne.io.read_raw(raw_file_path)
         info = raw_data.info
@@ -85,8 +85,10 @@ class Experiment(object):
         print("  > Choose word list builder = %s" %  word_list_builder_name)
         if 'GFP_Kmeans' == word_list_builder_name:
             return GFPKmeansWordListBuilder(self.electrode_location_map)
+        if 'dummy' == word_list_builder_name:
+            return DummyEEGLanguageDictionaryBuilder()
     
-    def word_list_building(self, eeg_matrix, eeg_info) -> AbstractEEGWordList:
+    def word_list_building(self, eeg_matrix, eeg_info) -> AbstractEEGLanguageDictionary:
         word_list_builder: AbstractWordListBuilder = self.select_word_list_builder()
         word_list = None
         
@@ -134,7 +136,7 @@ class Experiment(object):
         eeg_matrix = self.get_eeg_data_matrix(eeg_data)
         eeg_info = self.get_eeg_info(eeg_data)
         eeg_matrix = self.preprocess(eeg_matrix)
-        word_list: AbstractEEGWordList = self.word_list_building(eeg_matrix, eeg_info)
+        word_list: AbstractEEGLanguageDictionary = self.word_list_building(eeg_matrix, eeg_info)
         if self.get_bool_congiguration_item('serialize_word_list'):
             print('  ------ Serialize Word List to %s ------' % self.configuration['output_word_list_file_path'])
             word_list.serialize_to(self.configuration['output_word_list_file_path'])

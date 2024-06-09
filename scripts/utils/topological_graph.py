@@ -17,8 +17,6 @@ def eeg2map(data, eletrode_location_map):
     top_norm = (top-mn)/(mx-mn)
     return top_norm
 
-
-
 def topo(data, eletrode_location_map, n_grid=64):
     """Interpolate EEG topography onto a regularly spaced grid
 
@@ -52,7 +50,6 @@ def topo(data, eletrode_location_map, n_grid=64):
     Yi = np.linspace(-r, r, n_grid)
     data_ip = griddata((X, Y), data, (Xi[None, :], Yi[:, None]), method = 'cubic')
     return data_ip
-
 
 def findstr(s, L):
     """Find string in list of strings, returns indices.
