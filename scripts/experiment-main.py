@@ -10,6 +10,8 @@ from language_processing.parsers.parser import *
 from language_processing.language_builder.language_builder import *
 from language_processing.language_builder.configuration import *
 import mne
+from utils.plot.plot_util import *
+from language_processing.lexers.segmentation_solution import *
 
 class Experiment(object):
     def __init__(self, configuration: Dict, prepare_data_immediately = False):
@@ -142,6 +144,7 @@ class Experiment(object):
     def do_segmentation(self, dictionary, data):
         word_sequence = self.select_lexer().segment(dictionary, data, self.electrode_location_map)
         print(word_sequence.get_word_sequence())
+        return word_sequence
         
     def prepare_data(self, preprocess = True, force_reprepare_data = False):
         if self.data_prepared and not force_reprepare_data:
@@ -209,6 +212,18 @@ class Experiment(object):
         prediction_model: AbstractPreEpilepticStatePredictionModel = self.build_model(self.configuration)
         # Evaluation
         prediction_model.training(eeg_matrix, eeg_info, dictionary, grammar, parser)
+        
+class ExperimentVisualizer(object):
+    def __init__(self, experiment) -> None:
+        self._experiment: Experiment = experiment
+    def visualize_segmentation(self, segmentation_solution: SegmentationSolution, sel_times_from_slot_id = -1, sel_times_to_slot_id = -1):
+        if not self._experiment.data_prepared:
+            self._experiment.prepare_data()
+        plot_segments(end_points=segmentation_solution.get_segment_endpoints(), segment_categories=segmentation_solution.get_word_sequence(), \
+            cnt_auto_gen_color=self._experiment.configuration['langugae_configuration']['cnt_words'], \
+                sel_times_from_slot_id=sel_times_from_slot_id, \
+                    sel_times_to_slot_id=sel_times_to_slot_id)
+        
 
 experiment_configuration1 = {
     'raw_file_path': '../data/dataset1/Raw_EDF_Files/p10_Record1.edf',
@@ -216,6 +231,9 @@ experiment_configuration1 = {
     'time_samples_limit': 1000,
     'montage': 'standard_1020',
     'dictionary_builder': 'random',
+    'langugae_configuration':{
+        'cnt_words': 10
+    },
     'dictionary_builder_configuration':{
         'cnt_words': 10  
     },

@@ -22,12 +22,15 @@ def check_and_fix_time_range(points, sel_times_from_slot_id = -1, sel_times_to_s
         sel_times_to_slot_id = max(points)
     return (sel_times_from_slot_id, sel_times_to_slot_id)
 
-def plot_segments(end_points, linewidth = 2, segment_categories = None, colors = None, sel_times_from_slot_id = -1, sel_times_to_slot_id = -1):
+def plot_segments(end_points, linewidth = 2, segment_categories = None, colors = None, sel_times_from_slot_id = -1, sel_times_to_slot_id = -1, cnt_auto_gen_color = -1):
     sel_times_from_slot_id, sel_times_to_slot_id = check_and_fix_time_range(end_points, sel_times_from_slot_id, sel_times_to_slot_id)
         
     current_time_point_index = 1
     cnt_end_points = len(end_points)
     sorted(end_points)
+    if(colors == None):
+        colors = generate_random_color_rgb_descriptions(cnt_auto_gen_color)
+        
 
     while current_time_point_index < cnt_end_points:
         time_point = end_points[current_time_point_index]
@@ -40,8 +43,7 @@ def plot_segments(end_points, linewidth = 2, segment_categories = None, colors =
                             end_points[current_time_point_index] - sel_times_from_slot_id, \
                             facecolor='#aabbcc' if segment_categories is None or colors is None else colors[segment_categories[current_time_point_index - 1]],
                             alpha=0.1)
-                # print("draw retangle from %d to %d" % (end_points[current_time_point_index - 1],\
-                #                                       end_points[current_time_point_index]))
+               
 
         current_time_point_index += 1
 

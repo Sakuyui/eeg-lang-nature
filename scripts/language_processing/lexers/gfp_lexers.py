@@ -16,7 +16,7 @@ class GFPElectrodeValueBasedLexer(AbstractLexer) :
         distances = [eeg_state_distance_topological(eeg_language_dictionary.get_eeg_state_representation_of_word(id), state, electrode_location_configuration) for id in range(0, cnt_word_in_dictionary)]
         return np.argmax(distances)
         
-    def segment(self, dictionary: AbstractEEGLanguageDictionary, eeg_data: NDArray, electrode_location_configuration) -> NDArray:
+    def segment(self, dictionary: AbstractEEGLanguageDictionary, eeg_data: NDArray, electrode_location_configuration) -> SegmentationSolution:
         cnt_channels = eeg_data.shape[0]
         electrode_averages = np.average(eeg_data, axis=0)
         gfps = np.sqrt(np.sum((eeg_data - electrode_averages) ** 2 / cnt_channels, axis=0))
