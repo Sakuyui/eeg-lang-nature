@@ -1,5 +1,4 @@
 # Pasre the EEG Data
-# eeg_syntax_tree: AbstractEEGSyntaxTree = parser.parse(eeg_info, eeg_matrix, word_list, grammar)
 from typing import Dict
 from entities.grammar import *
 from entities.word import *
@@ -80,31 +79,33 @@ class Experiment(object):
     def get_eeg_info(self, eeg_data):
         return eeg_data.info
     
-    def select_word_list_builder(self) -> AbstractWordListBuilder:
-        word_list_builder_name = self.configuration['word_list_builder']
-        print("  > Choose word list builder = %s" %  word_list_builder_name)
-        if 'GFP_Kmeans' == word_list_builder_name:
-            return GFPKmeansWordListBuilder(self.electrode_location_map)
-        if 'dummy' == word_list_builder_name:
+    def select_dictionary_builder(self) -> AbstractWordListBuilder:
+        dictionary_builder_name = self.configuration['dictionary_builder']
+        print("  > Choose word list builder = %s" %  dictionary_builder_name)
+        if 'GFP_Kmeans' == dictionary_builder_name:
+            return GFPKmeansEEGLanguageDictionaryBuilder(self.electrode_location_map)
+        if 'dummy' == dictionary_builder_name:
             return DummyEEGLanguageDictionaryBuilder()
+        if 'random' == dictionary_builder_name:
+            return 
     
-    def word_list_building(self, eeg_matrix, eeg_info) -> AbstractEEGLanguageDictionary:
-        word_list_builder: AbstractWordListBuilder = self.select_word_list_builder()
-        word_list = None
+    def build_dictionary(self, eeg_matrix, eeg_info) -> AbstractEEGLanguageDictionary:
+        dictionary_builder: AbstractWordListBuilder = self.select_dictionary_builder()
+        dictionary = None
         
-        if self.get_bool_congiguration_item('build_word_list_from_file'):
-            word_list = word_list_builder.deserialize_from_file(self.configuration['input_word_list_file_path'])
-            print(" ------ deserialize word list from %s ------" % self.configuration['input_word_list_file_path'])
-            return word_list
-        word_list = word_list_builder.build_word_list(eeg_matrix, eeg_info, self.electrode_location_map)
-        return word_list
+        if self.get_bool_congiguration_item('build_dictionary_from_file'):
+            dictionary = dictionary_builder.deserialize_from_file(self.configuration['input_dictionary_file_path'])
+            print(" ------ deserialize word list from %s ------" % self.configuration['input_dictionary_file_path'])
+            return dictionary
+        dictionary = dictionary_builder.build_dictionary(eeg_matrix, eeg_info, self.electrode_location_map)
+        return dictionary
     
     def select_grammar_extractor(self) -> AbstracrGrammarExtractor:
         raise NotImplementedError
     
-    def grammar_extraction(self, eeg_matrix, eeg_info, word_list) -> AbstractEEGGrammar:
+    def grammar_extraction(self, eeg_matrix, eeg_info, dictionary) -> AbstractEEGGrammar:
         grammar_extractor: AbstracrGrammarExtractor =  self.select_grammar_extractor(self.configuration)
-        return grammar_extractor.extract_grammar(eeg_matrix, eeg_info, word_list)
+        return grammar_extractor.extract_grammar(eeg_matrix, eeg_info, dictionary)
     
     def select_parser(self) -> AbstractEEGParser:
         raise NotImplementedError
@@ -117,10 +118,10 @@ class Experiment(object):
         model = model_builder.build_model(self.select_model(), self.configuration)
         raise NotImplementedError
     
-    def evaluation_model(self, eeg_matrix, eeg_info, word_list, grammar, parser, prediction_model):
+    def evaluation_model(self, eeg_matrix, eeg_info, dictionary, grammar, parser, prediction_model):
         raise NotImplementedError
     
-    def _segment(self, dataset_for_segmentation, word_list):
+    def _segment(self, dataset_for_segmentation, dictionary):
         word_sequence = []
     
     def select_lexer(self):
@@ -136,10 +137,10 @@ class Experiment(object):
         eeg_matrix = self.get_eeg_data_matrix(eeg_data)
         eeg_info = self.get_eeg_info(eeg_data)
         eeg_matrix = self.preprocess(eeg_matrix)
-        word_list: AbstractEEGLanguageDictionary = self.word_list_building(eeg_matrix, eeg_info)
-        if self.get_bool_congiguration_item('serialize_word_list'):
-            print('  ------ Serialize Word List to %s ------' % self.configuration['output_word_list_file_path'])
-            word_list.serialize_to(self.configuration['output_word_list_file_path'])
+        dictionary: AbstractEEGLanguageDictionary = self.build_dictionary(eeg_matrix, eeg_info)
+        if self.get_bool_congiguration_item('serialize_dictionary'):
+            print('  ------ Serialize Word List to %s ------' % self.configuration['output_dictionary_file_path'])
+            dictionary.serialize_to(self.configuration['output_dictionary_file_path'])
         
         # segmentation
         if dataset_for_segmentation == None:
@@ -150,10 +151,10 @@ class Experiment(object):
         if self.get_bool_congiguration_item("load_word_sequence_from_file"):
             word_sequence = np.load(self.configuration['input_word_sequence_file_path'])
         else:
-            word_sequence = self.select_lexer().segment(word_list, dataset_for_segmentation, self.electrode_location_map)
+            word_sequence = self.select_lexer().segment(dictionary, dataset_for_segmentation, self.electrode_location_map)
         
         print(word_sequence)
-        if not self.get_bool_congiguration_item('build_word_list_from_file') and self.get_bool_congiguration_item('save_word_sequence'):
+        if not self.get_bool_congiguration_item('build_dictionary_from_file') and self.get_bool_congiguration_item('save_word_sequence'):
             print('  ------ Save Segmentation Results (Word Sequence) to %s ------' % self.configuration['output_word_sequence_file_path'])
             np.save(self.configuration['output_word_sequence_file_path'], word_sequence)
         print("-------- End Building EEG Language --------")
@@ -164,15 +165,15 @@ class Experiment(object):
         eeg_matrix = self.get_eeg_data_matrix(eeg_data)
         eeg_info = self.get_eeg_info(eeg_data)
         # Extract Word List
-        word_list: AbstractEEGWordList = self.word_list_building(eeg_matrix, eeg_info)
+        dictionary: AbstractEEGLanguageDictionary = self.build_dictionary(eeg_matrix, eeg_info)
         # Grammar Extraction
-        grammar: AbstractEEGGrammar = self.grammar_extraction(eeg_matrix, eeg_info, word_list)
+        grammar: AbstractEEGGrammar = self.grammar_extraction(eeg_matrix, eeg_info, dictionary)
         # Select EEG Data Parser
         parser: AbstractEEGParser = self.select_parser(self.configuration)
         # Model building
         prediction_model: AbstractPreEpilepticStatePredictionModel = self.build_model(self.configuration)
         # Evaluation
-        self.evaluation(eeg_matrix, eeg_info, word_list, grammar, parser, prediction_model, self.configuration)
+        self.evaluate(eeg_matrix, eeg_info, dictionary, grammar, parser, prediction_model, self.configuration)
         
     def model_trainning(self):
         # load EEG data and its information according to the configuration given when calling this method.
@@ -180,25 +181,28 @@ class Experiment(object):
         eeg_matrix = self.get_eeg_data_matrix(eeg_data)
         eeg_info = self.get_eeg_info(eeg_data)
         # Extract Word List
-        word_list: AbstractEEGWordList = self.word_list_building(eeg_matrix, eeg_info)
+        dictionary: AbstractEEGLanguageDictionary = self.build_dictionary(eeg_matrix, eeg_info)
         # Grammar Extraction
-        grammar: AbstractEEGGrammar = self.grammar_extraction(eeg_matrix, eeg_info, word_list)
+        grammar: AbstractEEGGrammar = self.grammar_extraction(eeg_matrix, eeg_info, dictionary)
         # Select EEG Data Parser
         parser: AbstractEEGParser = self.select_parser(self.configuration)
         # Model building
         prediction_model: AbstractPreEpilepticStatePredictionModel = self.build_model(self.configuration)
         # Evaluation
-        prediction_model.training(eeg_matrix, eeg_info, word_list, grammar, parser)
+        prediction_model.training(eeg_matrix, eeg_info, dictionary, grammar, parser)
 
 experiment_configuration1 = {
     'raw_file_path': '../data/dataset1/Raw_EDF_Files/p10_Record1.edf',
     'ch_names': ['Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1','O2','F7','F8','T3','T4','T5','T6','Fz','A1','A2'],
     'montage': 'standard_1020',
-    'word_list_builder': 'GFP_Kmeans',
-    'serialize_word_list': True,
-    'output_word_list_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_list.wl.npy',
-    'build_word_list_from_file': True,
-    'input_word_list_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_list.wl.npy',
+    'dictionary_builder': 'dummy',
+    'dictionary_builder_configuration':{
+        'cnt_word': 10  
+    },
+    'serialize_dictionary': True,
+    'output_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl.npy',
+    'build_dictionary_from_file': True,
+    'input_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl.npy',
     'lexer': 'gfp-electrode-value-based-lexer',
     'save_word_sequence': True,
     'load_word_sequence_from_file': True,

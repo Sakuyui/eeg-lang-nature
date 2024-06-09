@@ -1,5 +1,7 @@
 import numpy as np
 from typing import List, Set
+from scripts.entities.word import *
+from scripts.entities.grammar import *
 class AbstractEEGGrammar(object):
     def deserialize_from(self, file_path):
         raise NotImplementedError
@@ -12,8 +14,8 @@ class AbstractEEGLanguage(object):
         pass
     
 class EEGPCFGLanguage(AbstractEEGLanguage):
-    def __init__(self, grammars: List = None, word_list: Set = None):
+    def __init__(self, grammars: AbstractEEGGrammar = None, dictionary: AbstractEEGLanguageDictionary = None):
         self.grammars : List = []
-        self.word_list : Set = word_list
+        self.dictionary : AbstractEEGLanguageDictionary = dictionary
         
     

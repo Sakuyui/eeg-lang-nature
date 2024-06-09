@@ -1,11 +1,11 @@
 from .segmentation_solution import *
-from .abstract_segmentor import *
+from .abstract_lexer import *
 import numpy as np
 import scipy
 
-class DNMSegmenter(AbstractSegmenter):
-    def __init__(self, language_configuration, segmenter_configuration):
-        super().__init__(language_configuration, segmenter_configuration)
+class DNMLexer(AbstractLexer):
+    def __init__(self, language_configuration):
+        super().__init__()
         self._word_list_size = language_configuration.configuration_word_count()
 
     def _calculate_DNM_indexes(self, signal_data):
@@ -29,8 +29,8 @@ class DNMSegmenter(AbstractSegmenter):
             DNM_indexes[t] = DNM_index
             
         return DNM_indexes
-        
-    def do_segment(self, signal_data) -> SegmentationSolution:
-        DNM_indexes = self._calculate_DNM_indexes(signal_data)
+    
+    def segment(self, dictionary: AbstractEEGLanguageDictionary, eeg_data_in_2d_matrix: NDArray):
+        DNM_indexes = self._calculate_DNM_indexes(eeg_data_in_2d_matrix)
         peaks = scipy.signal.find_peaks(DNM_indexes)[0]
         return peaks

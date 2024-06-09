@@ -7,19 +7,23 @@ import numpy as np
 from scipy import signal
 
 class AbstractWordListBuilder(object):
-    def build_word_list(self, eeg_matrix, eeg_info, electrode_locations):
+    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations) -> AbstractEEGLanguageDictionary:
         raise NotImplementedError
     def deserialize_from_file(self, file_path):
         raise NotImplementedError
            
 class AbstracrGrammarExtractor(object):
-    def extract_grammar(self, eeg_matrix, eeg_info, word_list):
+    def extract_grammar(self, eeg_matrix, eeg_info, dictionary):
         raise NotImplementedError
     
 from utils.microstates_algorithms import locmax
 class DummyEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def __init__(self, *args, **kwargs):
         super().__init__()
+    def deserialize_from_file(self, file_path):
+        return DictionaryImplementedEEGLanguageDictionary(word_list=None).deserialize_from(file_path)
+    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations):
+        return super().build_dictionary(eeg_matrix, eeg_info, electrode_locations)   
     
 class GFPKmeansEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def __init__(self, eletrode_location_map):
@@ -36,7 +40,7 @@ class GFPKmeansEEGLanguageDictionaryBuilder(AbstractWordListBuilder):
     def deserialize_from_file(self, file_path):
         return DictionaryImplementedEEGLanguageDictionary(word_list=None).deserialize_from(file_path)
        
-    def build_word_list(self, eeg_matrix, eeg_info, electrode_locations, n_clusters=10, n_runs=5, doplot=True) -> AbstractEEGLanguageDictionary:
+    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations, n_clusters=10, n_runs=5, doplot=True) -> AbstractEEGLanguageDictionary:
         from utils.microstates_algorithms import kmeans
         
          # --- normalized data ---
