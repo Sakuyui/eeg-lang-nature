@@ -1,6 +1,6 @@
 class SegmentationSolution(object):
     def __init__(self, word_id_sequence, segment_endpoints):
-        if len(segment_endpoints) != len(word_id_sequence) + 1:
+        if len(segment_endpoints) != len(word_id_sequence):
             raise ValueError
         self.endpoints = segment_endpoints
         self.word_id_sequence = word_id_sequence

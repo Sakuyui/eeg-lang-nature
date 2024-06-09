@@ -12,8 +12,11 @@ from language_processing.language_builder.configuration import *
 import mne
 
 class Experiment(object):
-    def __init__(self, configuration: Dict):
+    def __init__(self, configuration: Dict, prepare_data_immediately = False):
         self.configuration = configuration
+        self.data_prepared = False
+        if prepare_data_immediately:
+            self.prepare_data()
     
     def is_configuration_exist(self, configure_name, recursively = False) -> bool:
         def recursively_check(dictionary):
@@ -64,16 +67,20 @@ class Experiment(object):
         info = raw_data.info
         if self.is_configuration_exist("ch_names"):
             mne.rename_channels(info, {x:y for x, y in zip(info.ch_names, self.configuration['ch_names'])})
+        print("make montage %s" % self.configuration['montage'])
         montage = mne.channels.make_standard_montage(self.configuration['montage'])
         raw_data.set_montage(montage)
         self.loaded_raw_data = raw_data
         self.electrode_location_map = [(ch_name, dig['r']) for dig, ch_name in list(zip(montage.dig, montage.ch_names)) if ch_name in self.configuration['ch_names']]
+
         return raw_data
     
-    def preprocess(self, eeg_matrix):
-        return eeg_matrix
+    def preprocess(self):
+        return self.eeg_matrix
     
     def get_eeg_data_matrix(self, eeg_data):
+        if 'time_samples_limit' in self.configuration:
+            return eeg_data.get_data()[:, :self.configuration['time_samples_limit']]
         return eeg_data.get_data()
     
     def get_eeg_info(self, eeg_data):
@@ -89,14 +96,16 @@ class Experiment(object):
         if 'random' == dictionary_builder_name:
             return RandomEEGLanguageDictionaryBuilder()
     
-    def build_dictionary(self, eeg_matrix, eeg_info) -> AbstractEEGLanguageDictionary:
+    def build_dictionary(self) -> AbstractEEGLanguageDictionary:
+        if not self.data_prepared:
+            self.prepare_data()
         dictionary_builder: AbstractWordListBuilder = self.select_dictionary_builder()
         dictionary = None
         if self.get_bool_congiguration_item('build_dictionary_from_file'):
             dictionary = dictionary_builder.deserialize_from_file(self.configuration['input_dictionary_file_path'])
             print(" ------ deserialize word list from %s ------" % self.configuration['input_dictionary_file_path'])
             return dictionary
-        dictionary = dictionary_builder.build_dictionary(eeg_matrix, eeg_info, self.electrode_location_map, self.configuration['dictionary_builder_configuration'])
+        dictionary = dictionary_builder.build_dictionary(self.eeg_matrix, self.eeg_info, self.electrode_location_map, self.configuration['dictionary_builder_configuration'])
         return dictionary
     
     def select_grammar_extractor(self) -> AbstracrGrammarExtractor:
@@ -129,21 +138,32 @@ class Experiment(object):
             from language_processing.lexers.gfp_lexers import GFPElectrodeValueBasedLexer
             lexer = GFPElectrodeValueBasedLexer()
         return lexer
+         
+    def do_segmentation(self, dictionary, data):
+        word_sequence = self.select_lexer().segment(dictionary, data, self.electrode_location_map)
+        print(word_sequence.get_word_sequence())
+        
+    def prepare_data(self, preprocess = True, force_reprepare_data = False):
+        if self.data_prepared and not force_reprepare_data:
+            return
+        self.eeg_data = self.load_eeg_data()
+        self.eeg_matrix = self.get_eeg_data_matrix(self.eeg_data)
+        self.eeg_info = self.get_eeg_info(self.eeg_data)
+        if preprocess:
+            self.eeg_matrix = self.preprocess()
+        self.data_prepared = True
     
     def build_language(self, dataset_for_segmentation = None):
         print("-------- Begin Building EEG Language --------")
-        eeg_data = self.load_eeg_data()
-        eeg_matrix = self.get_eeg_data_matrix(eeg_data)
-        eeg_info = self.get_eeg_info(eeg_data)
-        eeg_matrix = self.preprocess(eeg_matrix)
-        dictionary: AbstractEEGLanguageDictionary = self.build_dictionary(eeg_matrix, eeg_info)
+        self.prepare_data()
+        dictionary: AbstractEEGLanguageDictionary = self.build_dictionary(self.eeg_matrix, self.eeg_info)
         if self.get_bool_congiguration_item('serialize_dictionary'):
             print('  ------ Serialize Word List to %s ------' % self.configuration['output_dictionary_file_path'])
             dictionary.serialize_to(self.configuration['output_dictionary_file_path'])
-        
+                
         # segmentation
         if dataset_for_segmentation == None:
-            dataset_for_segmentation = eeg_matrix
+            dataset_for_segmentation = self.eeg_matrix
         
         print("  ------ Segmenting ------")
         word_sequence = None
@@ -152,7 +172,7 @@ class Experiment(object):
         else:
             word_sequence = self.select_lexer().segment(dictionary, dataset_for_segmentation, self.electrode_location_map)
         
-        print(word_sequence)
+        print(word_sequence.get_word_sequence())
         if not self.get_bool_congiguration_item('build_dictionary_from_file') and self.get_bool_congiguration_item('save_word_sequence'):
             print('  ------ Save Segmentation Results (Word Sequence) to %s ------' % self.configuration['output_word_sequence_file_path'])
             np.save(self.configuration['output_word_sequence_file_path'], word_sequence)
@@ -193,22 +213,23 @@ class Experiment(object):
 experiment_configuration1 = {
     'raw_file_path': '../data/dataset1/Raw_EDF_Files/p10_Record1.edf',
     'ch_names': ['Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1','O2','F7','F8','T3','T4','T5','T6','Fz','A1','A2'],
+    'time_samples_limit': 1000,
     'montage': 'standard_1020',
     'dictionary_builder': 'random',
     'dictionary_builder_configuration':{
         'cnt_words': 10  
     },
     'serialize_dictionary': True,
-    'output_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl.npy',
+    'output_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl',
     'build_dictionary_from_file': False,
-    'input_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl.npy',
+    'input_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl',
     'lexer': 'gfp-electrode-value-based-lexer',
     'save_word_sequence': True,
     'load_word_sequence_from_file': False,
     'input_word_sequence_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_sequence.ws.npy',
     'output_word_sequence_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_sequence.ws.npy',
-
 }
 
 experiment = Experiment(experiment_configuration1)
-experiment.build_language()
+dictionary = experiment.build_dictionary()
+#experiment.build_language()

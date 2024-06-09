@@ -4,8 +4,8 @@ sys.path.append("..")
 sys.path.append("../..")
 
 from typing import List, Set
-from scripts.entities.word import *
-from scripts.entities.grammar import *
+from entities.word import *
+from entities.grammar import *
 class AbstractEEGGrammar(object):
     def deserialize_from(self, file_path):
         raise NotImplementedError

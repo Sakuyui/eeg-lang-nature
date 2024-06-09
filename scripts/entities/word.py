@@ -1,7 +1,6 @@
 import numpy as np
 from typing import List
-from scripts.entities.eeg_state import *
-from scripts.entities.eeg_state import AbstractEEGState
+from .eeg_state import *
 class AbstractEEGWord(object):
     def __init__(self):
         pass
@@ -18,6 +17,8 @@ class StateRepresentedEEGWord(AbstractEEGWord):
         }
     def get_word_id(self):
         return self.tags['word_id']
+    def get_eeg_state_representation_of_word(self):
+        return self.state
     
 class SegmentRepresentedEEGWord(AbstractEEGWord):
     def __init__(self, segment, word_id: int):
@@ -25,8 +26,10 @@ class SegmentRepresentedEEGWord(AbstractEEGWord):
         self.tags = {
             'word_id': word_id
         }
+    
     def get_word_id(self):
         return self.tags['word_id']
+    
     def get_eeg_state_representation_of_word(self):
         return SegmentEEGState(self.segment)
     
@@ -48,6 +51,8 @@ class AbstractEEGLanguageDictionary(object):
     
     def get_eeg_state_representation_of_word(self, word_id) -> AbstractEEGState:
         raise NotImplementedError
+    
+    
 
 class DictionaryImplementedEEGLanguageDictionary(AbstractEEGLanguageDictionary):
     def __init__(self, word_list: List[AbstractEEGWord]):
