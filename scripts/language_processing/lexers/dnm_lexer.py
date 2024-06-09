@@ -30,7 +30,7 @@ class DNMLexer(AbstractLexer):
             
         return DNM_indexes
     
-    def segment(self, dictionary: AbstractEEGLanguageDictionary, eeg_data_in_2d_matrix: NDArray):
+    def segment(self, dictionary: AbstractEEGLanguageDictionary, eeg_data_in_2d_matrix: NDArray) -> SegmentationSolution:
         DNM_indexes = self._calculate_DNM_indexes(eeg_data_in_2d_matrix)
         peaks = scipy.signal.find_peaks(DNM_indexes)[0]
-        return peaks
+        return SegmentationSolution(None, peaks)
