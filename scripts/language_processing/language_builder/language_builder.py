@@ -10,7 +10,7 @@ from utils.microstates_algorithms import locmax
 
 
 class AbstractWordListBuilder(object):
-    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations) -> AbstractEEGLanguageDictionary:
+    def build_dictionary(self, eeg_matrix, eeg_info, electrode_locations, dictionary_building_config: Dict) -> AbstractEEGLanguageDictionary:
         raise NotImplementedError
     def deserialize_from_file(self, file_path):
         raise NotImplementedError

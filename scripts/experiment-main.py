@@ -87,7 +87,7 @@ class Experiment(object):
         if 'dummy' == dictionary_builder_name:
             return DummyEEGLanguageDictionaryBuilder()
         if 'random' == dictionary_builder_name:
-            return 
+            return RandomEEGLanguageDictionaryBuilder()
     
     def build_dictionary(self, eeg_matrix, eeg_info) -> AbstractEEGLanguageDictionary:
         dictionary_builder: AbstractWordListBuilder = self.select_dictionary_builder()
@@ -97,7 +97,7 @@ class Experiment(object):
             dictionary = dictionary_builder.deserialize_from_file(self.configuration['input_dictionary_file_path'])
             print(" ------ deserialize word list from %s ------" % self.configuration['input_dictionary_file_path'])
             return dictionary
-        dictionary = dictionary_builder.build_dictionary(eeg_matrix, eeg_info, self.electrode_location_map)
+        dictionary = dictionary_builder.build_dictionary(eeg_matrix, eeg_info, self.electrode_location_map, self.configuration['dictionary_builder_configuration'])
         return dictionary
     
     def select_grammar_extractor(self) -> AbstracrGrammarExtractor:
