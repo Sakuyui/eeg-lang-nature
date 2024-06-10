@@ -82,7 +82,7 @@ def plot_signal_multiple_channels(signal_data, channel_names, sampling_rate_hz, 
                     endpoint=False)
     fig, ax = plt.subplots(figsize = (175, 135))
     
-    cnt_channels = len(signal_data.shape[0])
+    cnt_channels = signal_data.shape[0]
     for i in range(cnt_channels):
         ax.plot(x, np.take(focusing_signal_data, x, axis = 1)[i, :] + y_scale * i, linewidth=3.0)
         

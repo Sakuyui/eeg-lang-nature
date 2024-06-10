@@ -143,7 +143,7 @@ class Experiment(object):
          
     def do_segmentation(self, dictionary, data):
         word_sequence = self.select_lexer().segment(dictionary, data, self.electrode_location_map)
-        print(word_sequence.get_word_sequence())
+        print(word_sequence.get_word_id_sequence())
         return word_sequence
         
     def prepare_data(self, preprocess = True, force_reprepare_data = False):
@@ -214,40 +214,29 @@ class Experiment(object):
         prediction_model.training(eeg_matrix, eeg_info, dictionary, grammar, parser)
         
 class ExperimentVisualizer(object):
-    def __init__(self, experiment) -> None:
+    def __init__(self, experiment: Experiment) -> None:
         self._experiment: Experiment = experiment
-    def visualize_segmentation(self, segmentation_solution: SegmentationSolution, sel_times_from_slot_id = -1, sel_times_to_slot_id = -1):
+    def visualize_segmentation(self, segmentation_solution: SegmentationSolution, sel_times_from_slot_id = -1, sel_times_to_slot_id = -1) -> None:
         if not self._experiment.data_prepared:
             self._experiment.prepare_data()
-        plot_segments(end_points=segmentation_solution.get_segment_endpoints(), segment_categories=segmentation_solution.get_word_sequence(), \
-            cnt_auto_gen_color=self._experiment.configuration['langugae_configuration']['cnt_words'], \
+
+        plot_signal_multiple_channels(signal_data = self._experiment.eeg_matrix, \
+            channel_names = self._experiment.configuration['ch_names'], \
+            sampling_rate_hz = (int)(self._experiment.eeg_info['sfreq']), \
+             time_slot_from = sel_times_from_slot_id, time_slot_to = sel_times_to_slot_id)
+        
+        plot_segment_lines(time_points=segmentation_solution.get_segment_endpoints(),\
+            linewidth = 5, sel_times_from_slot_id = sel_times_from_slot_id, sel_times_to_slot_id = sel_times_to_slot_id)
+
+        plot_segments(end_points = segmentation_solution.get_segment_endpoints(),\
+            segment_categories=segmentation_solution.get_word_id_sequence(), \
+            cnt_auto_gen_color = self._experiment.configuration['langugae_configuration']['cnt_words'], \
                 sel_times_from_slot_id=sel_times_from_slot_id, \
                     sel_times_to_slot_id=sel_times_to_slot_id)
         
 
-experiment_configuration1 = {
-    'raw_file_path': '../data/dataset1/Raw_EDF_Files/p10_Record1.edf',
-    'ch_names': ['Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1','O2','F7','F8','T3','T4','T5','T6','Fz','A1','A2'],
-    'time_samples_limit': 1000,
-    'montage': 'standard_1020',
-    'dictionary_builder': 'random',
-    'langugae_configuration':{
-        'cnt_words': 10
-    },
-    'dictionary_builder_configuration':{
-        'cnt_words': 10  
-    },
-    'serialize_dictionary': True,
-    'output_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl',
-    'build_dictionary_from_file': False,
-    'input_dictionary_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/dictionary.wl',
-    'lexer': 'gfp-electrode-value-based-lexer',
-    'save_word_sequence': True,
-    'load_word_sequence_from_file': False,
-    'input_word_sequence_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_sequence.ws.npy',
-    'output_word_sequence_file_path': 'C:/Users/Micro/Desktop/Research/eeg-language/data/word_sequence.ws.npy',
-}
 
-experiment = Experiment(experiment_configuration1)
-dictionary = experiment.build_dictionary()
-#experiment.build_language()
+def main():
+    experiment = Experiment(experiment_configuration1)
+    dictionary = experiment.build_dictionary()
+    #experiment.build_language()

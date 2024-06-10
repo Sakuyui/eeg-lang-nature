@@ -28,5 +28,6 @@ class GFPElectrodeValueBasedLexer(AbstractLexer) :
             peak = gfp_peaks[peak_index]
             state_t = eeg_data[:, peak]
             word_sequence[peak_index] = self.get_most_similar_word_id(dictionary, EletrodeValuesEEGState(state_t), electrode_location_configuration)
-        
+            # Todo: Make this method (segment()) higer speed. 
+                # # Packing eletrode values into state can be slow.
         return SegmentationSolution(word_sequence, gfp_peaks)
