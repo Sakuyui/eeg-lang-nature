@@ -52,6 +52,8 @@ class AbstractEEGLanguageDictionary(object):
     def get_eeg_state_representation_of_word(self, word_id) -> AbstractEEGState:
         raise NotImplementedError
     
+    def get_word_ids(self):
+        raise NotImplementedError
     
 
 class DictionaryImplementedEEGLanguageDictionary(AbstractEEGLanguageDictionary):
@@ -80,4 +82,7 @@ class DictionaryImplementedEEGLanguageDictionary(AbstractEEGLanguageDictionary):
     def get_eeg_state_representation_of_word(self, word_id) -> AbstractEEGState:
         word: AbstractEEGWord = self.dictionary[word_id]
         return word.get_eeg_state_representation_of_word()
+    
+    def get_word_ids(self) -> List:
+        return list(self.dictionary.keys())
     

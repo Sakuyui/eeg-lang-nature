@@ -235,7 +235,6 @@ class ExperimentVisualizer(object):
                     sel_times_to_slot_id=sel_times_to_slot_id)
         
 
-
 def main():
     experiment = Experiment(experiment_configuration1)
     dictionary = experiment.build_dictionary()
