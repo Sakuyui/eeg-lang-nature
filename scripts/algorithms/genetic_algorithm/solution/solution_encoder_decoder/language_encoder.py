@@ -11,3 +11,4 @@ class EEGPCFLEncoder(AbstractEEGLanguageEncoder):
 
     def encode(self):
         raise NotImplementedError
+    

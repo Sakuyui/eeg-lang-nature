@@ -32,7 +32,7 @@ class AbstractGeneticAlgorithm(object):
         # apply natural selection if the amount of solutions larger than maximum population size.
         if len(solutions) > population_maximum_size:
             solutions, fitness = self.do_natural_selection(solutions)
-        
+            
         for epoch_index in range(cnt_epoches):
             self.event_epoch_begin({
                 'solutions': solutions,
@@ -56,14 +56,11 @@ class AbstractGeneticAlgorithm(object):
                 'ga_configuration': self.ga_configuration,
                 'epoch_index': epoch_index 
             })
+            
         self.event_algorithm_finish({
                 'solutions': solutions,
                 'fitness': fitness,
                 'ga_configuration': self.ga_configuration
         })
-                
-            
-            
         
-        
-        
+    

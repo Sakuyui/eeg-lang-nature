@@ -9,7 +9,6 @@ import tqdm
 from scipy.stats import wasserstein_distance
 from scripts.entities.eeg_state import EletrodeValuesEEGState, AbstractEEGState
 
-
 class GFPElectrodeValueBasedLexer(AbstractLexer) :
     def get_most_similar_word_id(self, eeg_language_dictionary: AbstractEEGLanguageDictionary, state: AbstractEEGState, electrode_location_configuration) -> int:
         cnt_word_in_dictionary = eeg_language_dictionary.get_word_count()
