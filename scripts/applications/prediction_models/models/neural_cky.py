@@ -14,7 +14,7 @@ class NN_CYK_Model(nn.Module):
         self.word_emb_size = args['word_emb_size']
         self.enable_slide_windows = False if 'enable_slide_windows' not in args else args['enable_slide_windows']
         self.window_size = False if 'window_size' not in args else args['window_size']
-        self.word_embedding = args['word_embedding']
+        self.word_embeddings = args['word_embeddings']
         self.grammar_unaries = args['grammar_unaries']
         self.grammar_preterminates = args['grammar_preterminates']
         self.grammar_double_nonterminates = args['grammar_double_nonterminates']
@@ -88,7 +88,7 @@ class NN_CYK_Model(nn.Module):
         def get_terminate_parses(self, w):
             unary_grammar_id = self.get_unary_grammar_id(w)
             preterminate_grammar_id = self.get_preterminate_grammar_id(unary_grammar_id)
-            feature1 = self.terminate_feature_generation_model(self.word_embedding[w], self.grammar_unaries[unary_grammar_id])
+            feature1 = self.terminate_feature_generation_model(self.word_embeddings[w], self.grammar_unaries[unary_grammar_id])
             feature2 = self.preterminate_feature_generation_model(feature1, self.grammar_preterminates[preterminate_grammar_id])
             return [[1.0, feature1, unary_grammar_id], [1.0, feature2, preterminate_grammar_id]]
         

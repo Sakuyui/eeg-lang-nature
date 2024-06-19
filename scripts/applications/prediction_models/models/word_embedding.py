@@ -21,7 +21,7 @@ class WordEmbeddingModel(nn.Module):
         log_probs = F.log_softmax(out, dim=1)
         return log_probs
     
-    def train(self, sentences, lr = 0.001):
+    def train(self, sentences, epoch = 10, lr = 0.001):
         losses = []
         loss_function = nn.NLLLoss()
         model = self
@@ -34,7 +34,7 @@ class WordEmbeddingModel(nn.Module):
             )
             for i in range(self.context_size, len(sentences))
         ]
-        for epoch in range(10):
+        for epoch in range(epoch):
             total_loss = 0
             print("epoch = %d" % epoch)
             for context, target in ngrams:
