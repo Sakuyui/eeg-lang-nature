@@ -9,9 +9,9 @@ class SyntaxInfusedModel(nn.Module):
         self.combining_model = combining_model
         self.prediction_model = prediction_model
         
-    def forward(self, word):
-        sequential_model_output = self.sequential_model.forward(word)
-        syntax_model_output = self.syntax_model.forward(word)
+    def forward(self, word_t, eeg_data_t):
+        sequential_model_output = self.sequential_model.forward(eeg_data_t)
+        syntax_model_output = self.syntax_model.forward(word_t)
         combined_features = self.combining_model(sequential_model_output,\
                         syntax_model_output).forward()
         prediction_model_output = self.prediction_model(combined_features)
@@ -20,14 +20,19 @@ class SyntaxInfusedModel(nn.Module):
 class SimpleConcatCombing(nn.Module):
     # sequential_model_output shape = [batch, N_1], syntax_model_output shape = [batch, N_2]
     def forward(self, sequential_model_output = None, syntax_model_output = None):
-        if sequential_model_output == None and syntax_model_output == None:
+        if sequential_model_output is None and syntax_model_output is None:
             return None
-        if sequential_model_output == None:
+        if sequential_model_output is None:
             return syntax_model_output
-        if syntax_model_output == None:
+        if syntax_model_output is None:
             return sequential_model_output
-        return torch.cat((sequential_model_output, syntax_model_output), dim = 1)
-    
+        
+        # Make symmetric hold in processing. i.e. the output irrelavant to the orders of two input features.
+        concated_feature1 = torch.cat([sequential_model_output, syntax_model_output])
+        concated_feature2 = torch.cat([sequential_model_output, syntax_model_output])
+        
+        return (concated_feature1 + concated_feature2) / 2
+        
 class FCPrediction(nn.Module):
     def __init__(self, input_size = 200, output_size = 1):
         super(FCPrediction, self).__init__()
