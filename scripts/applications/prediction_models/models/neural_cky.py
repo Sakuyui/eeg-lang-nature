@@ -153,12 +153,15 @@ class NN_CYK_Model(nn.Module):
             # parse format is a triple : [possibility, feature, grammar id]
             # A -> BC
             for parse_i in cell1:
+                p_1 = parse_i[0]
+                symbol_id_1 = parse_i[-1]
+                if symbol_id_1 == -1:
+                    continue
                 for parse_j in cell2:
-                    p_1 = parse_i[0]
                     p_2 = parse_j[0]
-                    symbol_id_1 = parse_i[-1]
                     symbol_id_2 = parse_j[-1]
-
+                    if symbol_id_2 == -1:
+                        continue
                     grammars = self.grammar_double_nonterminates[:,symbol_id_1, symbol_id_2]
                     
                     if self.infuse_structure_only:

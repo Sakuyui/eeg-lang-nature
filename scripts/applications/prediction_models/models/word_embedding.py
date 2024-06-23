@@ -5,7 +5,7 @@ import torch.optim as optim
 from typing import List
 import itertools
 class WordEmbeddingModel(nn.Module):
-    def __init__(self, vocab_size, embedding_dim = 10, context_size = 2):
+    def __init__(self, vocab_size, embedding_dim = 128, context_size = 2):
         super(WordEmbeddingModel, self).__init__()
         self.context_size = context_size
         self.embedding_dim = embedding_dim
