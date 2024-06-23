@@ -2,6 +2,15 @@ import torch
 import torch.nn as nn
 import heapq
 
+INDEX_PARSE_POSSIBILITY = 0
+INDEX_PARSE_FEATURE = 1
+INDEX_PARSE_GRAMMAR_ID = 2
+INDEX_PARSE_SYMBOL_ID = 3
+
+GRAMMAR_TYPE_START = 0
+GRAMMAR_TYPE_NONTERMINATE = 1
+GRAMMAR_TYPE_PRETERMINATE = 2
+
 class NN_CYK_FeatureCombingModel_Preterminate(nn.Module):
     def __init__(self, word_embedding_length = 200, grammar_embedding_length = 0, output_feature_length = 128):
         super(NN_CYK_FeatureCombingModel_Preterminate, self).__init__()
@@ -114,12 +123,9 @@ class NN_CYK_Model(nn.Module):
                                                            self.records[cell2_coordination[1]][cell2_coordination[0]],\
                                                            cell1_coordination, cell2_coordination)
                 current_record[current_record_length - inner_record_index - 2] = self.beam_search_strategy(cell_data) if self.beam_search_strategy is not None else cell_data
-        result = heapq.nlargest(1, self.records[-1][0], lambda x: x[0])[0][1]
+        result = heapq.nlargest(1, self.records[-1][0], lambda x: x[0])[0][INDEX_PARSE_FEATURE]
         self.t += 1
         return result
-            
-    def get_grammar_for_generation(self, parse_i, parse_j):
-            return self.double_nonterminates_grammar_id_mapping["%s#%s" % (str(parse_i[0]), str(parse_j[0]))]
     
     def get_terminate_parses(self, w):
         # [possibility, feature, grammar id, symbol_id]
@@ -153,37 +159,73 @@ class NN_CYK_Model(nn.Module):
                         grammar_id = self.NT + (self.NT + self.T) * (self.NT + self.T) * k + \
                                 symbol_id_1 * (self.NT + self.T) + symbol_id_2
                         if not self.infuse_structure_only:
-                            feature = self.merge_model(torch.FloatTensor(parse_i[1]), \
-                                torch.FloatTensor(parse_j[1]), torch.FloatTensor(self.grammar_embeddings[grammar_id]))
+                            feature = self.merge_model(torch.FloatTensor(parse_i[INDEX_PARSE_FEATURE]), \
+                                torch.FloatTensor(parse_j[INDEX_PARSE_FEATURE]), torch.FloatTensor(self.grammar_embeddings[grammar_id]))
                         result.append([p, feature, grammar_id, k])
 
             # S -> A
             for _, parse_i in enumerate(cell1 + cell2):
-                p_1 = parse_i[0] 
-                symbol_id = parse_i[3]
-                grammar_id = parse_i[2]                
+                p_1 = parse_i[INDEX_PARSE_POSSIBILITY]
+                grammar_id = parse_i[INDEX_PARSE_GRAMMAR_ID]
+                symbol_id = parse_i[INDEX_PARSE_SYMBOL_ID]
                 # Skip for those parses that belong to start grammars or pre-terminate grammars.
                 if grammar_id >= self.NT and grammar_id <= self.NT + (self.NT * (self.NT + self.T) * (self.NT + self.T)):
                     continue
                 
                 if self.infuse_structure_only:
-                    feature = self.merge_model(parse_i[1], None)
+                    feature = self.merge4_model(torch.FloatTensor(parse_i[INDEX_PARSE_FEATURE]), None)
                 
                 p = p_1 * self.grammar_starts[symbol_id]
                 
-                use_grammar_id = symbol_id
+                reduce_grammar_id = symbol_id
                 if not self.infuse_structure_only:
-                    feature = self.merge_model(parse_i[1], parse_j[1], self.grammar_embeddings[grammar_id])
+                    feature = self.merge_model(parse_i[INDEX_PARSE_FEATURE], parse_j[INDEX_PARSE_FEATURE],\
+                        self.grammar_embeddings[grammar_id])
                             
-                result.append([p, feature, use_grammar_id, -1]) # symbol id = -1 denote it is parse reduce 
+                result.append([p, feature, reduce_grammar_id, -1]) # symbol id = -1 denote it is parse reduce 
                                                                    # to a start symbol
                                                                    # symbol id 
                                                                    #   - -1: Start Symbol
-                                                                   #   - [0, |V| - 1]: terminate symbols
-                                                                   #   - [|V|, |V| + |NT|]: non-terminate symbols
+                                                                   #   - [0, |P| - 1]: terminate symbols
+                                                                   #   - [|P|, |P| + |NT| - 1]: non-terminate symbols
+                                                                   #   - [|P| + |NT|, |P| + |NT| + |V| - 1]: word
 
             return result
+    
         
+    def is_start_symbol(self, symbol_id):
+        return symbol_id == -1
+        
+    def is_preterminate_symbol(self, symbol_id):
+        return symbol_id >= 0 and symbol_id < self.T
+    
+    def is_nonterminate_symbol(self, symbol_id):
+        return symbol_id >= self.T + self.NT and symbol_id < self.T + self.NT 
+    
+    def is_word_symbol(self, symbol_id):
+        return symbol_id >= self.T + self.NT and symbol_id < self.T + self.NT + self.V
+        
+    def get_grammar_id(self, grammar_type, reduce_symbol_id, produce_symbol_id_1 = None, produce_symbol_id_2 = None):
+        if GRAMMAR_TYPE_START == grammar_type:
+            if not (self.is_start_symbol(reduce_symbol_id) and \
+                (self.is_preterminate_symbol(produce_symbol_id_1) or self.is_nonterminate_symbol(produce_symbol_id_1))):
+                raise ValueError
+            return produce_symbol_id_1 - self.T
+            
+        if GRAMMAR_TYPE_NONTERMINATE == grammar_type:
+            if not (self.is_nonterminate_symbol(reduce_symbol_id) and \
+                (self.is_nonterminate_symbol(produce_symbol_id_1) or self.is_preterminate_symbol(produce_symbol_id_1)) and \
+                    (self.is_nonterminate_symbol(produce_symbol_id_2) or self.is_preterminate_symbol(produce_symbol_id_2))):
+                raise ValueError
+            sum_NT_T = self.NT + self.T
+            return self.V + reduce_symbol_id * sum_NT_T * sum_NT_T + produce_symbol_id_1 * sum_NT_T + produce_symbol_id_2
+        
+        if GRAMMAR_TYPE_PRETERMINATE == grammar_type:
+            if not (self.is_preterminate_symbol(reduce_symbol_id) and \
+                (self.is_word_symbol(produce_symbol_id_1))):
+                raise ValueError
+            sum_NT_T = self.NT + self.T
+            return self.V + self.NT * sum_NT_T * sum_NT_T + (reduce_symbol_id) * self.V + produce_symbol_id_1 - self.T - self.NT
+
 def select_tops(cell, beam_size = 5):
     return heapq.nlargest(beam_size, cell, key= lambda x: x[0])
-
