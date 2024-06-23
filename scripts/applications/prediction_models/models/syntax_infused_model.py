@@ -3,6 +3,7 @@ import torch.nn as nn
 
 class SyntaxInfusedModel(nn.Module):
     def __init__(self, sequential_model, syntax_model, combining_model, prediction_model):
+        super(SyntaxInfusedModel, self).__init__()
         self.sequential_model = sequential_model
         self.syntax_model = syntax_model
         self.combining_model = combining_model
