@@ -56,7 +56,7 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module):
             ## RNN MODE
             x = x.view(-1, self.sequence_length, self.ncp_input_size)
             out, h_new = self.rnn(x, h)
-            print(" - out = %lf" % out)
+     
             out = out[:, -1, :]   # we have 28 outputs since each part of sequence generates an output. for classification, we only want the last one
             h = h_new
         self.h = h
@@ -67,14 +67,11 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module):
         ## RNN MODE
         x = sequence.view(-1, self.sequence_length, self.ncp_input_size)
         out, h_new = self.rnn(x, h)
-        print(" - out = %lf" % out)
         out = out[:, -1, :]   # we have 28 outputs since each part of sequence generates an output. for classification, we only want the last one
         h = h_new
         self.h = h
         return out, h_new
     
-
-
 def make_wiring_diagram(wiring, layout):
     import seaborn as sns
     import matplotlib.pyplot as plt
