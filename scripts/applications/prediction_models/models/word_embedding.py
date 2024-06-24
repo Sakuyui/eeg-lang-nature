@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from typing import List
 import itertools
+
 class WordEmbeddingModel(nn.Module):
     def __init__(self, vocab_size, embedding_dim = 128, context_size = 2):
         super(WordEmbeddingModel, self).__init__()
@@ -55,7 +56,6 @@ class WordEmbeddingModel(nn.Module):
                 # word wrapped in a tensor)
 
                 loss = loss_function(log_probs, torch.tensor([target], dtype=torch.long))
-
                 # Step 5. Do the backward pass and update the gradient
                 loss.backward()
                 optimizer.step()
