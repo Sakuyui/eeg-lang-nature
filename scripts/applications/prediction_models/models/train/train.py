@@ -1,0 +1,84 @@
+# -*- coding: utf-8 -*-
+
+from datetime import datetime, timedelta
+import torch
+import numpy as np
+from pathlib import Path
+from tqdm import tqdm
+import torch.nn as nn
+from torch.utils.data import TensorDataset, DataLoader
+
+
+class ModelTrainer():
+    def __init__(self, args):
+        self.args = args
+        self.model = args['model']
+        self.optimizer = args['optimizer']
+        train_arg = args['train_arg']
+        self.train_arg = train_arg
+        self.save_model_automatically = args['save_model_automatically']
+
+    def do_train(self, train_dataset, evaluation_dataset = None):
+        total_time = 0.0
+        best_metric = None
+        for epoch in range(1, self.train_arg['max_epoch'] + 1):
+            start = datetime.now()
+            self.train(train_dataset)
+            print(f"Epoch {epoch} / {self.train_arg['max_epoch']}:")
+            if evaluation_dataset is not None:
+                evaluation_results = self.evaluate(evaluation_dataset)
+
+            t = datetime.now() - start
+
+            # save the model if it is the best so far
+            
+            if self.comparasion(evaluation_results, best_metric) > 0:
+                best_metric = evaluation_results
+                best_e = epoch
+                if self.save_model_automatically:
+                    torch.save(
+                    obj=self.model.state_dict(),
+                    f = self.args['save_dir'] + "/" + self.args['save_model_name'] + ".pt"
+                    )
+                print(f"{t}s elapsed (saved)\n")
+            else:
+                print(f"{t}s elapsed\n")
+
+            total_time += t
+            if self.train_arg['patience'] > 0 and epoch - best_e >= self.train_arg['patience']:
+                break
+    
+    def train(self, train_dataset, test_dataset = None):
+        shuffle = self.train_arg['shuffle_trainning_set']
+        train_only = self.train_arg['train_only']
+        batch_size_train = self.train_arg['batch_size_train']
+
+        train_dataloader = DataLoader(TensorDataset(torch.FloatTensor(train_dataset[0]), torch.FloatTensor(train_dataset[1])),\
+            batch_size=batch_size_train, shuffle=shuffle)
+        if not train_only:
+            batch_size_test = self.train_arg['batch_size_test']
+            test_dataloader = DataLoader(TensorDataset(torch.FloatTensor(test_dataset[0]), torch.FloatTensor(test_dataset[1])),\
+                batch_size=batch_size_test, shuffle=shuffle)
+
+        self.model.train()
+        
+        t = tqdm(train_dataloader, total=int(len(train_dataloader)),  position=0, leave=True)
+        train_arg = self.train_arg
+        
+        for inputs, targets in t:
+            self.optimizer.zero_grad()
+            if self.train_arg['is_unsupervisor_learning']:
+                loss = self.model.loss(inputs)
+            else:
+                loss = self.model.loss(inputs, targets)
+            loss.backward()
+            if train_arg['clip'] > 0:
+                nn.utils.clip_grad_norm_(self.model.parameters(),
+                                        train_arg['clip'])
+            self.optimizer.step()
+            t.set_postfix(loss=loss.item())
+        return
+    
+    @torch.no_grad()
+    def evaluate(self, evaluation_dataset):
+        self.model.evaluate(evaluation_dataset[0], evaluation_dataset[1])
