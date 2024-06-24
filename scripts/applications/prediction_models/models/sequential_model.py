@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
-import torch
-import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 from ncps.torch import CfC, LTC
 from ncps.wirings import AutoNCP, NCP
@@ -42,7 +41,10 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
         #     motor_fanin=4,  # How many incomming syanpses has each motor neuron
         # )
         self.rnn = CfC(ncp_input_size, wiring)
-        self.cost_function = nn.CrossEntropyLoss()
+        self.sigmoid = nn.Sigmoid()
+
+        self.cost_function = nn.BCELoss()
+
         self.reset_hidden()
         #make_wiring_diagram(wiring, "kamada")
 
@@ -53,8 +55,17 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
         self.h = torch.zeros(1, self.hidden_size).to(device)
         
     def pre_train_epoch(self):
+        pass
+        #self.reset_hidden()
+        
+    def pre_test(self):
+        self.preserve_hidden = self.h
         self.reset_hidden()
         
+    def post_test(self):
+        self.h = self.preserve_hidden
+        self.preserve_hidden = None
+    
     def batch_forward(self, sequences):
         h = self.h
         for x in sequences:
@@ -68,22 +79,41 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
         return out, h_new
     
     
-    def forward(self, sequence):
-        sequence_total_length = len(sequence)
-        self.sequence_length    
-        for t in range(sequence_total_length):
-            h = self.h
-            ## RNN MODE
-            x = sequence[t].view(-1, self.sequence_length, self.ncp_input_size)
-            out, h_new = self.rnn(x, h)
-            out = out[:, -1, :]   # we have 28 outputs since each part of sequence generates an output. for classification, we only want the last one
-            h = h_new
-            self.h = h
-        return out, h_new
-    
-    
+    def forward(self, sequence, retain_outputs = False, retrain_hiddens = False, require_loss = False):
+        len(sequence)
+        outputs = [0]
+        hiddens = [None]
+        total_loss = 0.0
+        
+        sequence_length = len(sequence)
+        for t in np.arange(0, sequence_length, self.sequence_length):
+                h = self.h
+                ## RNN MODE
+                x = sequence[t: t+self.sequence_length].view(-1, self.sequence_length, self.ncp_input_size)
+                out, h_new = self.rnn(x, h)
+                out = out[:, -1, :]   # we have 28 outputs since each part of sequence generates an output. for classification, we only want the last one
+                out = self.sigmoid(out)
+                h = h_new
+                self.h = h
+                if retrain_hiddens:
+                    hiddens.append(h_new)
+                else:
+                    hiddens[0] = h_new
+                if retain_outputs:
+                    outputs.append(out)
+                else:
+                    outputs[0] = out
+        
+        return outputs[1:] if retain_outputs else outputs[0], hiddens[1:] if retrain_hiddens else hiddens[0], total_loss if require_loss else None
+
     def loss(self, inputs, targets):
-        return self.cost_function(self(inputs), targets)
+        loss = 0
+        print(inputs.shape)
+        input_sequence = inputs
+        print("forward")
+        inference = self(input_sequence.view(-1, self.ncp_input_size), False, False, False)
+        loss = self.cost_function(inference[0].view(-1), targets.view(-1))
+        return loss
             
             
     

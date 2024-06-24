@@ -72,7 +72,7 @@ class ModelTrainer():
             if self.train_arg['patience'] > 0 and epoch - best_e >= self.train_arg['patience']:
                 break
     
-    def train(self, train_dataset, test_dataset = None):
+    def train(self, train_dataset, test_dataset = None, time_sequence = False):
         shuffle = self.train_arg['shuffle_trainning_set']
         train_only = self.train_arg['train_only']
         batch_size_train = self.train_arg['batch_size_train']
@@ -86,22 +86,45 @@ class ModelTrainer():
         max_epoches = self.train_arg['max_epoches']
         for epoch in range(1, max_epoches + 1):
             self.model.train()
+            if callable(getattr(self.model, 'pre_train_epoch', None)):
+                self.model.pre_train_epoch()
             
             t = tqdm(train_dataloader, total=int(len(train_dataloader)),  position=0, leave=True)
             train_arg = self.train_arg
             
-            for inputs, targets in t:
-                self.optimizer.zero_grad()
-                if self.train_arg['is_unsupervisor_learning']:
-                    loss = self.model.loss(inputs)
-                else:
-                    loss = self.model.loss(inputs, targets)
-                loss.backward()
-                if train_arg['clip'] > 0:
-                    nn.utils.clip_grad_norm_(self.model.parameters(),
-                                            train_arg['clip'])
-                self.optimizer.step()
-                t.set_postfix(loss=loss.item(), epoch=epoch)
+            if time_sequence:
+                for inputs, targets in t:
+                    self.optimizer.zero_grad()
+                    print(inputs.shape, len(inputs))
+                    for index in range(len(inputs)):
+                        if self.train_arg['is_unsupervisor_learning']:
+                            loss = self.model.loss(inputs[index])
+                        else:
+                            loss = self.model.loss(inputs[index], targets[index])
+                        print("backward in epoch %d" % epoch)
+                        loss.backward()
+                        if train_arg['clip'] > 0:
+                            nn.utils.clip_grad_norm_(self.model.parameters(),
+                                                    train_arg['clip'])
+                        self.optimizer.step()
+                        loss.detach()
+                        t.set_postfix(loss=loss.item(), epoch=epoch)
+            else:
+                for inputs, targets in t:
+                    self.optimizer.zero_grad()
+                    
+                    if self.train_arg['is_unsupervisor_learning']:
+                            loss = self.model.loss(inputs)
+                    else:
+                            loss = self.model.loss(inputs, targets)
+                    print("backward in epoch %d" % epoch)
+                    loss.backward()
+                    if train_arg['clip'] > 0:
+                            nn.utils.clip_grad_norm_(self.model.parameters(),
+                                                    train_arg['clip'])
+                    self.optimizer.step()
+                    t.set_postfix(loss=loss.item(), epoch=epoch)
+                        
             
             if not train_only:
                 evaluation_results = self.evaluate(test_dataloader)
