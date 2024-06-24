@@ -9,6 +9,29 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
 
+
+class ModelTrainable():
+    def __init__(self):
+        pass
+    
+    def train(self):
+        pass
+    
+    def evaluation(self):
+        pass
+
+    def pre_train_epoch(self):
+        pass
+    
+    def post_train_epoch(self):
+        pass
+    
+    def pre_test(self):
+        pass
+    
+    def post_test(self):
+        pass
+    
 class ModelTrainer():
     def __init__(self, args):
         self.args = args
@@ -23,6 +46,7 @@ class ModelTrainer():
         best_metric = None
         for epoch in range(1, self.train_arg['max_epoches'] + 1):
             start = datetime.now()
+            self.model.pre_train_epoch()
             self.train(train_dataset)
             print(f"Epoch {epoch} / {self.train_arg['max_epoches']}:")
             if evaluation_dataset is not None:

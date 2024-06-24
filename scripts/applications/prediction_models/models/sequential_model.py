@@ -7,6 +7,8 @@ import torch.nn.functional as F
 from ncps.torch import CfC, LTC
 from ncps.wirings import AutoNCP, NCP
 
+from scripts.applications.prediction_models.models.train.train import ModelTrainable
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class EletrodeValueSequentialModel(nn.Module):
@@ -18,14 +20,13 @@ class EletrodeValueSequentialModel(nn.Module):
         return self.rnn(x_t)
 
 
-class LNNElectrodeValueBasedPredictionModel(nn.Module):
+class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
     def __init__(self, ncp_input_size, hidden_size, output_size, sequence_length):
         super(LNNElectrodeValueBasedPredictionModel, self).__init__()
 
         self.hidden_size = hidden_size
         self.ncp_input_size = ncp_input_size
         self.sequence_length = sequence_length
-
 
         ### DESIGNED NCP architecture
         wiring = AutoNCP(hidden_size, output_size)    # 234,034 parameters
@@ -41,6 +42,7 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module):
         #     motor_fanin=4,  # How many incomming syanpses has each motor neuron
         # )
         self.rnn = CfC(ncp_input_size, wiring)
+        self.cost_function = nn.CrossEntropyLoss()
         self.reset_hidden()
         #make_wiring_diagram(wiring, "kamada")
 
@@ -49,6 +51,9 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module):
         
     def reset_hidden(self):
         self.h = torch.zeros(1, self.hidden_size).to(device)
+        
+    def pre_train_epoch(self):
+        self.reset_hidden()
         
     def batch_forward(self, sequences):
         h = self.h
@@ -62,15 +67,25 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module):
         self.h = h
         return out, h_new
     
+    
     def forward(self, sequence):
-        h = self.h
-        ## RNN MODE
-        x = sequence.view(-1, self.sequence_length, self.ncp_input_size)
-        out, h_new = self.rnn(x, h)
-        out = out[:, -1, :]   # we have 28 outputs since each part of sequence generates an output. for classification, we only want the last one
-        h = h_new
-        self.h = h
+        sequence_total_length = len(sequence)
+        self.sequence_length    
+        for t in range(sequence_total_length):
+            h = self.h
+            ## RNN MODE
+            x = sequence[t].view(-1, self.sequence_length, self.ncp_input_size)
+            out, h_new = self.rnn(x, h)
+            out = out[:, -1, :]   # we have 28 outputs since each part of sequence generates an output. for classification, we only want the last one
+            h = h_new
+            self.h = h
         return out, h_new
+    
+    
+    def loss(self, inputs, targets):
+        return self.cost_function(self(inputs), targets)
+            
+            
     
 def make_wiring_diagram(wiring, layout):
     import seaborn as sns
