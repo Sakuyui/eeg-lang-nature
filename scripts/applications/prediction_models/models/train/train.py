@@ -21,10 +21,10 @@ class ModelTrainer():
     def do_train(self, train_dataset, evaluation_dataset = None):
         total_time = 0.0
         best_metric = None
-        for epoch in range(1, self.train_arg['max_epoch'] + 1):
+        for epoch in range(1, self.train_arg['max_epoches'] + 1):
             start = datetime.now()
             self.train(train_dataset)
-            print(f"Epoch {epoch} / {self.train_arg['max_epoch']}:")
+            print(f"Epoch {epoch} / {self.train_arg['max_epoches']}:")
             if evaluation_dataset is not None:
                 evaluation_results = self.evaluate(evaluation_dataset)
 
@@ -52,7 +52,6 @@ class ModelTrainer():
         shuffle = self.train_arg['shuffle_trainning_set']
         train_only = self.train_arg['train_only']
         batch_size_train = self.train_arg['batch_size_train']
-
         train_dataloader = DataLoader(TensorDataset(torch.FloatTensor(train_dataset[0]), torch.FloatTensor(train_dataset[1])),\
             batch_size=batch_size_train, shuffle=shuffle)
         if not train_only:
@@ -60,23 +59,28 @@ class ModelTrainer():
             test_dataloader = DataLoader(TensorDataset(torch.FloatTensor(test_dataset[0]), torch.FloatTensor(test_dataset[1])),\
                 batch_size=batch_size_test, shuffle=shuffle)
 
-        self.model.train()
-        
-        t = tqdm(train_dataloader, total=int(len(train_dataloader)),  position=0, leave=True)
-        train_arg = self.train_arg
-        
-        for inputs, targets in t:
-            self.optimizer.zero_grad()
-            if self.train_arg['is_unsupervisor_learning']:
-                loss = self.model.loss(inputs)
-            else:
-                loss = self.model.loss(inputs, targets)
-            loss.backward()
-            if train_arg['clip'] > 0:
-                nn.utils.clip_grad_norm_(self.model.parameters(),
-                                        train_arg['clip'])
-            self.optimizer.step()
-            t.set_postfix(loss=loss.item())
+        max_epoches = self.train_arg['max_epoches']
+        for epoch in range(1, max_epoches + 1):
+            self.model.train()
+            
+            t = tqdm(train_dataloader, total=int(len(train_dataloader)),  position=0, leave=True)
+            train_arg = self.train_arg
+            
+            for inputs, targets in t:
+                self.optimizer.zero_grad()
+                if self.train_arg['is_unsupervisor_learning']:
+                    loss = self.model.loss(inputs)
+                else:
+                    loss = self.model.loss(inputs, targets)
+                loss.backward()
+                if train_arg['clip'] > 0:
+                    nn.utils.clip_grad_norm_(self.model.parameters(),
+                                            train_arg['clip'])
+                self.optimizer.step()
+                t.set_postfix(loss=loss.item(), epoch=epoch)
+            
+            if not train_only:
+                evaluation_results = self.evaluate(test_dataloader)
         return
     
     @torch.no_grad()
