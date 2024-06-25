@@ -108,9 +108,7 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
 
     def loss(self, inputs, targets):
         loss = 0
-        print(inputs.shape)
         input_sequence = inputs
-        print("forward")
         inference = self(input_sequence.view(-1, self.ncp_input_size), False, False, False)
         loss = self.cost_function(inference[0].view(-1), targets.view(-1))
         return loss

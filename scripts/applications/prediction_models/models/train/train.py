@@ -8,8 +8,6 @@ from tqdm import tqdm
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
-
-
 class ModelTrainable():
     def __init__(self):
         pass
@@ -101,14 +99,14 @@ class ModelTrainer():
                             loss = self.model.loss(inputs[index])
                         else:
                             loss = self.model.loss(inputs[index], targets[index])
-                        print("backward in epoch %d" % epoch)
-                        loss.backward()
+                        loss.backward(retain_graph =True)
+                        
                         if train_arg['clip'] > 0:
                             nn.utils.clip_grad_norm_(self.model.parameters(),
                                                     train_arg['clip'])
                         self.optimizer.step()
-                        loss.detach()
                         t.set_postfix(loss=loss.item(), epoch=epoch)
+                        loss.detach()
             else:
                 for inputs, targets in t:
                     self.optimizer.zero_grad()
@@ -117,13 +115,13 @@ class ModelTrainer():
                             loss = self.model.loss(inputs)
                     else:
                             loss = self.model.loss(inputs, targets)
-                    print("backward in epoch %d" % epoch)
                     loss.backward()
                     if train_arg['clip'] > 0:
                             nn.utils.clip_grad_norm_(self.model.parameters(),
                                                     train_arg['clip'])
                     self.optimizer.step()
                     t.set_postfix(loss=loss.item(), epoch=epoch)
+                    loss.detach()
                         
             
             if not train_only:
