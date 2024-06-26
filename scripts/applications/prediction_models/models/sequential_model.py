@@ -79,20 +79,26 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
         return out, h_new
     
     
-    def forward(self, sequence, retain_outputs = False, retrain_hiddens = False, require_loss = False):
-        len(sequence)
+    def forward(self, sequence, one_time_inference = False, retain_outputs = False, retrain_hiddens = False, require_loss = False):
         outputs = [0]
         hiddens = [None]
         total_loss = 0.0
-        
+
         sequence_length = len(sequence)
+
+        #h0 = torch.zeros(self.sequence_length, self.hidden_size).to(device)
+        #self.h = h0
         for t in np.arange(0, sequence_length, self.sequence_length):
-                h = self.h
+                
+                h = self.h.clone()
                 ## RNN MODE
                 x = sequence[t: t+self.sequence_length].view(-1, self.sequence_length, self.ncp_input_size)
-                out, h_new = self.rnn(x, h)
-                out = out[:, -1, :]   # we have 28 outputs since each part of sequence generates an output. for classification, we only want the last one
+                #print(x.shape, sequence.shape)
+                out, h_new = self.rnn(x, torch.zeros(self.sequence_length, self.hidden_size))
+                out = out[:, -1, :] # We have 28 outputs since each part of sequence generates an output. 
+                                    #       for classification, we only want the last one.
                 out = self.sigmoid(out)
+                #print(out)
                 h = h_new
                 self.h = h
                 if retrain_hiddens:
@@ -106,11 +112,18 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
         
         return outputs[1:] if retain_outputs else outputs[0], hiddens[1:] if retrain_hiddens else hiddens[0], total_loss if require_loss else None
 
+
     def loss(self, inputs, targets):
+        # important! the h is changed....
+        retain_h = self.h.clone()
+        self.reset_hidden()
         loss = 0
-        input_sequence = inputs
-        inference = self(input_sequence.view(-1, self.ncp_input_size), False, False, False)
-        loss = self.cost_function(inference[0].view(-1), targets.view(-1))
+        for i in range(len(inputs)):
+            target = targets[i]
+            output = self(inputs[i,:].view(1, -1))
+            p = output[0][0]
+            loss += self.cost_function(p, target.view(-1))
+        self.h = retain_h
         return loss
             
             
