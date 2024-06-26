@@ -43,9 +43,9 @@ class TNPCFG(nn.Module):
 
 
     def forward(self, input, **kwargs):
-        print("begin forward>>>>>>>>>>>>>")
-        x = input['word']
-        print("x = %s" % str(x))
+        print(f"begin forward>>>>>>>>>>>>>, input shape = {input.shape}")
+        
+        x = input
 
         b, n = x.shape[:2]
         print("b, n = %d, %d" % (b, n)) # batch and number?
@@ -57,7 +57,7 @@ class TNPCFG(nn.Module):
         def terms():
             term_prob = self.term_mlp(self.term_emb).log_softmax(-1)
             print(term_prob.shape)
-            return term_prob[torch.arange(self.T)[None,None], x[:, :, None]]
+            return term_prob[torch.arange(self.T)[None,None].long(), x[:, :, None].long()]
 
         def rules():
             rule_state_emb = self.rule_state_emb
@@ -81,7 +81,9 @@ class TNPCFG(nn.Module):
 
     def loss(self, input):
         rules = self.forward(input)
-        result = self.pcfg._inside(rules=rules, lens=input['seq_len'])
+        seq_len = len(input)
+        print(f"seq_len = {seq_len}")
+        result = self.pcfg._inside(rules=rules, lens=seq_len)
         logZ = -result['partition'].mean()
         return logZ
 

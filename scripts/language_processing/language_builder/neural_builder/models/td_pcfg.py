@@ -1,4 +1,9 @@
 import torch
+import sys
+sys.path.append("..")
+sys.path.append("../..")
+
+from scripts.language_processing.language_builder.fn import checkpoint, diagonal_copy_, stripe, diagonal
 
 class PCFG_base():
 
@@ -155,7 +160,7 @@ class TDPCFG(PCFG_base):
         L = rules['left']  # (batch, NT+T, r)
         R = rules['right'] # (batch, NT+T, r)
         
-        print("shape: unary = %s, root = %s, H = %s, L = %s, R = %s" % (unary, root, H, L, R))
+        #print("shape: unary = %s, root = %s, H = %s, L = %s, R = %s" % (unary, root, H, L, R))
         T = unary.shape[-1]
         S = L.shape[-2]
         NT = S - T

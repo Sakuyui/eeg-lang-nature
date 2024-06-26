@@ -8,7 +8,9 @@ from ncps.wirings import AutoNCP, NCP
 
 from scripts.applications.prediction_models.models.train.train import ModelTrainable
 
+from tqdm import tqdm
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 
 class EletrodeValueSequentialModel(nn.Module):
     def __init__(self, args):
@@ -112,22 +114,23 @@ class LNNElectrodeValueBasedPredictionModel(nn.Module, ModelTrainable):
         
         return outputs[1:] if retain_outputs else outputs[0], hiddens[1:] if retrain_hiddens else hiddens[0], total_loss if require_loss else None
 
-
     def loss(self, inputs, targets):
         # important! the h is changed....
+        inputs = inputs.view(-1, 19)
+        targets = targets.view(-1, 1)
         retain_h = self.h.clone()
         self.reset_hidden()
         loss = 0
-        for i in range(len(inputs)):
+        times = range(len(inputs))
+        for i in times:
             target = targets[i]
             output = self(inputs[i,:].view(1, -1))
             p = output[0][0]
             loss += self.cost_function(p, target.view(-1))
         self.h = retain_h
+        print("loss calculation completed.")
         return loss
             
-            
-    
 def make_wiring_diagram(wiring, layout):
     import seaborn as sns
     import matplotlib.pyplot as plt

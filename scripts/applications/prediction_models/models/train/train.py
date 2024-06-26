@@ -92,34 +92,34 @@ class ModelTrainer():
             t = tqdm(train_dataloader, total=int(len(train_dataloader)),  position=0, leave=True)
             train_arg = self.train_arg
             
-            if time_sequence:
-                for inputs, targets in t:
-                    self.optimizer.zero_grad()
+            # if time_sequence:
+            #     for inputs, targets in t:
+            #         self.optimizer.zero_grad()
+            #         if self.train_arg['is_unsupervisor_learning']:
+            #             loss = self.model.loss(inputs)
+            #         else:
+            #             loss = self.model.loss(inputs, targets)
+            #         loss.backward(retain_graph = True)
+            #         if train_arg['clip'] > 0:
+            #             nn.utils.clip_grad_norm_(self.model.parameters(),
+            #                                         train_arg['clip'])
+            #         self.optimizer.step()
+            #         t.set_postfix(loss=loss.item(), epoch=epoch)
+            #         loss.detach()
+            # else:
+            for inputs, targets in t:
                     if self.train_arg['is_unsupervisor_learning']:
                         loss = self.model.loss(inputs)
                     else:
                         loss = self.model.loss(inputs, targets)
-                    loss.backward(retain_graph = True)
-                    if train_arg['clip'] > 0:
-                        nn.utils.clip_grad_norm_(self.model.parameters(),
-                                                    train_arg['clip'])
-                    self.optimizer.step()
-                    t.set_postfix(loss=loss.item(), epoch=epoch)
-                    loss.detach()
-            else:
-                for inputs, targets in t:
-                    self.optimizer.zero_grad()
-                    if self.train_arg['is_unsupervisor_learning']:
-                        loss = self.model.loss(inputs)
-                    else:
-                        loss = self.model.loss(inputs, targets)
-                    loss.backward()
                     if train_arg['clip'] > 0:
                             nn.utils.clip_grad_norm_(self.model.parameters(),
                                                     train_arg['clip'])
+                    self.optimizer.zero_grad()
+                    loss.backward()
                     self.optimizer.step()
                     t.set_postfix(loss=loss.item(), epoch=epoch)
-                    loss.detach()
+                    # loss.detach()
             
             if not train_only:
                 evaluation_results = self.evaluate(test_dataloader)
