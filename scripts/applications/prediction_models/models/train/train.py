@@ -6,7 +6,7 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 import torch.nn as nn
-from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader, StackDataset
 
 class ModelTrainable():
     def __init__(self):
@@ -70,18 +70,28 @@ class ModelTrainer():
             if self.train_arg['patience'] > 0 and epoch - best_e >= self.train_arg['patience']:
                 break
     
-    def train(self, train_dataset, test_dataset = None, time_sequence = False):
+    def train(self, train_dataset, test_dataset = None, use_stack_dataset = False):
         INDEX_DATASET_INPUTS = 0
         INDEX_DATASET_TARGETS = 1
         shuffle = self.train_arg['shuffle_trainning_set']
         train_only = self.train_arg['train_only']
         batch_size_train = self.train_arg['batch_size_train']
-        train_dataloader = DataLoader(TensorDataset(torch.FloatTensor(train_dataset[INDEX_DATASET_INPUTS]), torch.FloatTensor(train_dataset[INDEX_DATASET_TARGETS])),\
-            batch_size=batch_size_train, shuffle=shuffle)
+        if use_stack_dataset:
+            train_dataloader = DataLoader(StackDataset(train_dataset),\
+                batch_size=batch_size_train, shuffle=shuffle)
+        else:
+            train_dataloader = DataLoader(TensorDataset(torch.FloatTensor(train_dataset[INDEX_DATASET_INPUTS]), torch.FloatTensor(train_dataset[INDEX_DATASET_TARGETS])),\
+                batch_size=batch_size_train, shuffle=shuffle)
+        
         if not train_only:
             batch_size_test = self.train_arg['batch_size_test']
-            test_dataloader = DataLoader(TensorDataset(torch.FloatTensor(test_dataset[INDEX_DATASET_INPUTS]), torch.FloatTensor(test_dataset[INDEX_DATASET_TARGETS])),\
-                batch_size=batch_size_test, shuffle=shuffle)
+            if use_stack_dataset:
+                test_dataloader = DataLoader(StackDataset(test_dataset),\
+                    batch_size=batch_size_test, shuffle=shuffle)
+            else:
+                test_dataloader = DataLoader(TensorDataset(torch.FloatTensor(test_dataset[INDEX_DATASET_INPUTS]), torch.FloatTensor(test_dataset[INDEX_DATASET_TARGETS])),\
+                    batch_size=batch_size_test, shuffle=shuffle)
+        
         torch.autograd.set_detect_anomaly(True)
         max_epoches = self.train_arg['max_epoches']
         for epoch in range(1, max_epoches + 1):

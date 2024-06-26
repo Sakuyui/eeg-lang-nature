@@ -12,6 +12,12 @@ class SyntaxInfusedModel(nn.Module, ModelTrainable):
         self.combining_model = combining_model
         self.prediction_model = prediction_model
         self.cost_function = nn.BCELoss()
+        # Fix the sequential prediction model's parameters.
+            # The optimizer will not update the sequential prediction model's parameters.
+        # We'd like to just train the syntax related models, and fix the base sequential prediction model's parameters.
+            # We mill conduct comparison between base sequential prediction models and syntax-infused model.
+        print("Fix base sequential prediction model...")
+        self.sequential_model.requires_grad = False 
 
         
     def forward(self, word_t, eeg_data_t):
@@ -23,16 +29,19 @@ class SyntaxInfusedModel(nn.Module, ModelTrainable):
         prediction_model_output = self.prediction_model(combined_features)
         return prediction_model_output
 
-    def loss(self, eeg_data, words, targets):
-        inputs = eeg_data.view(-1, 19)
+    def loss(self, inputs, targets):
+        eeg_data = torch.Tensor(inputs[0]['eeg_data'])
+        words = torch.Tensor(inputs[0]['words'])
+        eeg_data = eeg_data.view(-1, 19)
         targets = targets.view(-1, 1)
         retain_sequential_prediction_model_hidden = self.sequential_model.h
         retain_nn_cky_model_records = self.syntax_model.records
         retain_nn_cky_model_windows_beginning_offset = self.syntax_model.windows_beginning_offset
         retain_nn_cky_model_t = 0
         loss = 0
-        times = range(len(inputs))
+        times = range(len(words))
         for i in times:
+            print(f"time {i}")
             target = targets[i]
             output = self(words[i], eeg_data[i,:].view(1, -1))
             loss += self.cost_function(output, target.view(-1))
