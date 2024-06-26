@@ -11,6 +11,8 @@ class SyntaxInfusedModel(nn.Module, ModelTrainable):
         self.syntax_model = syntax_model
         self.combining_model = combining_model
         self.prediction_model = prediction_model
+        self.cost_function = nn.BCELoss()
+
         
     def forward(self, word_t, eeg_data_t):
         sequential_model_output_hidden = self.sequential_model.forward(eeg_data_t)[1][-1]
@@ -21,8 +23,27 @@ class SyntaxInfusedModel(nn.Module, ModelTrainable):
         prediction_model_output = self.prediction_model(combined_features)
         return prediction_model_output
 
-    def loss(self, word_t, eeg_data_t):
-        pass
+    def loss(self, eeg_data, words, targets):
+        inputs = eeg_data.view(-1, 19)
+        targets = targets.view(-1, 1)
+        retain_sequential_prediction_model_hidden = self.sequential_model.h
+        retain_nn_cky_model_records = self.syntax_model.records
+        retain_nn_cky_model_windows_beginning_offset = self.syntax_model.windows_beginning_offset
+        retain_nn_cky_model_t = 0
+        loss = 0
+        times = range(len(inputs))
+        for i in times:
+            target = targets[i]
+            output = self(words[i], eeg_data[i,:].view(1, -1))
+            loss += self.cost_function(output, target.view(-1))
+            
+        self.sequential_model.h = retain_sequential_prediction_model_hidden()
+        self.syntax_model.records = retain_nn_cky_model_records
+        self.syntax_model.windows_beginning_offset = retain_nn_cky_model_windows_beginning_offset
+        self.syntax_model.t = retain_nn_cky_model_t
+        
+        print("loss calculation completed.")
+        return loss
         
 class SimpleConcatCombing(nn.Module):
     # sequential_model_output shape = [batch, N_1], syntax_model_output shape = [batch, N_2]
