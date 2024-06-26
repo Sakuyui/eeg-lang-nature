@@ -29,24 +29,27 @@ class SyntaxInfusedModel(nn.Module, ModelTrainable):
         prediction_model_output = self.prediction_model(combined_features)
         return prediction_model_output
 
-    def loss(self, inputs, targets):
-        eeg_data = torch.Tensor(inputs[0]['eeg_data'])
-        words = torch.Tensor(inputs[0]['words'])
+    def loss(self, dataset):
+        eeg_data = torch.Tensor(dataset[0]['eeg_data']).float()
+        words = torch.Tensor(dataset[0]['words'])
+        labels = torch.Tensor(dataset[0]['labels']).float()
         eeg_data = eeg_data.view(-1, 19)
-        targets = targets.view(-1, 1)
+        words = words.view(-1)
+        labels = labels.view(-1, 1)
         retain_sequential_prediction_model_hidden = self.sequential_model.h
         retain_nn_cky_model_records = self.syntax_model.records
         retain_nn_cky_model_windows_beginning_offset = self.syntax_model.windows_beginning_offset
-        retain_nn_cky_model_t = 0
+        retain_nn_cky_model_t = self.syntax_model.t
+        self.sequential_model.reset_hidden()
+        self.syntax_model.reset_global_context()
+        
         loss = 0
         times = range(len(words))
         for i in times:
-            print(f"time {i}")
-            target = targets[i]
+            target = labels[i]
             output = self(words[i], eeg_data[i,:].view(1, -1))
             loss += self.cost_function(output, target.view(-1))
-            
-        self.sequential_model.h = retain_sequential_prediction_model_hidden()
+        self.sequential_model.h = retain_sequential_prediction_model_hidden
         self.syntax_model.records = retain_nn_cky_model_records
         self.syntax_model.windows_beginning_offset = retain_nn_cky_model_windows_beginning_offset
         self.syntax_model.t = retain_nn_cky_model_t

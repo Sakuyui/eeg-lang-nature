@@ -117,19 +117,26 @@ class ModelTrainer():
             #         t.set_postfix(loss=loss.item(), epoch=epoch)
             #         loss.detach()
             # else:
-            for inputs, targets in t:
-                    if self.train_arg['is_unsupervisor_learning']:
-                        loss = self.model.loss(inputs)
-                    else:
-                        loss = self.model.loss(inputs, targets)
+            if use_stack_dataset:
+                for data in t:
+                    loss = self.model.loss(data)
                     if train_arg['clip'] > 0:
-                            nn.utils.clip_grad_norm_(self.model.parameters(),
-                                                    train_arg['clip'])
-                    self.optimizer.zero_grad()
-                    loss.backward()
-                    self.optimizer.step()
-                    t.set_postfix(loss=loss.item(), epoch=epoch)
-                    # loss.detach()
+                                nn.utils.clip_grad_norm_(self.model.parameters(),
+                                                        train_arg['clip'])
+            else:
+                for inputs, targets in t:
+                        if self.train_arg['is_unsupervisor_learning']:
+                            loss = self.model.loss(inputs)
+                        else:
+                            loss = self.model.loss(inputs, targets)
+                        if train_arg['clip'] > 0:
+                                nn.utils.clip_grad_norm_(self.model.parameters(),
+                                                        train_arg['clip'])
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            t.set_postfix(loss=loss.item(), epoch=epoch)
+            
             
             if not train_only:
                 evaluation_results = self.evaluate(test_dataloader)
